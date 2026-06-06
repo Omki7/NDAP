@@ -1,0 +1,480 @@
+/* ============================================================
+   NDAP — ASK NDAP CHAT ENGINE
+   Self-animating assistant turns: routing → thinking → blocks.
+   ============================================================ */
+
+/* ---------- small bits ---------- */
+function AgentAvatar({ size=30 }){
+  return (
+    <div style={{width:size,height:size,borderRadius:8,background:"var(--navy-800)",
+      display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"var(--sh-1)"}}>
+      <Emblem size={size-8}/>
+    </div>
+  );
+}
+function RoutePills({ route, n }){
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+      {route.map((r,i)=>{
+        const on=i<n;
+        return (
+          <React.Fragment key={i}>
+            {i>0 && <Icon name="chevR" size={12} style={{color: on?"var(--blue)":"var(--border-2)"}}/>}
+            <span style={{fontSize:11.5,fontWeight:600,padding:"3px 9px",borderRadius:20,
+              border:"1px solid",borderColor:on?"var(--blue)":"var(--border)",
+              color:on?"var(--blue-700)":"var(--muted-2)",background:on?"var(--blue-50)":"var(--surface-2)",
+              transition:"all .25s",display:"inline-flex",alignItems:"center",gap:5}}>
+              {on && i===n-1 && <Dot color="var(--blue)" pulse/>}{r}
+            </span>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+function ThinkTrace({ think, n, done }){
+  const [open,setOpen]=useState(true);
+  useEffect(()=>{ if(done) setOpen(false); },[done]);
+  if(!think.length) return null;
+  return (
+    <div style={{margin:"10px 0 4px",border:"1px solid var(--border)",borderRadius:"var(--r)",background:"var(--surface-2)",overflow:"hidden"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,
+        padding:"8px 12px",background:"none",border:"none",color:"var(--muted)",fontSize:12,fontWeight:600}}>
+        <Icon name="bolt" size={14} style={{color:"var(--saffron)"}}/>
+        <span>Reasoning trace</span>
+        <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+          {!done && <Dot color="var(--saffron)" pulse/>}
+          <Icon name={open?"chevD":"chevR"} size={13}/>
+        </span>
+      </button>
+      {open && (
+        <div style={{padding:"2px 12px 10px 14px",display:"flex",flexDirection:"column",gap:6}}>
+          {think.slice(0,n).map((s,i)=>(
+            <div key={i} className="fade-in" style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:12.5,color:"var(--ink-2)"}}>
+              <Icon name={i<n-1||done?"check":"clock"} size={13} style={{color:i<n-1||done?"var(--green)":"var(--muted-2)",marginTop:2,flexShrink:0}}/>
+              <span className="mono" style={{fontSize:12}}>{s}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- citation superscript text ---------- */
+function RichText({ md, onCite }){
+  /* supports **bold**, *italic*, [n] citation refs */
+  const parts = useMemo(()=>{
+    const out=[]; let key=0;
+    const tokens = md.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[\d+\])/g);
+    tokens.forEach(tok=>{
+      if(/^\*\*[^*]+\*\*$/.test(tok)) out.push(<strong key={key++}>{tok.slice(2,-2)}</strong>);
+      else if(/^\*[^*]+\*$/.test(tok)) out.push(<em key={key++}>{tok.slice(1,-1)}</em>);
+      else if(/^\[\d+\]$/.test(tok)){ const n=+tok.slice(1,-1);
+        out.push(<sup key={key++} onClick={()=>onCite&&onCite(n)} title="View source"
+          style={{color:"var(--blue)",cursor:"pointer",fontWeight:700,fontSize:".72em",padding:"0 1px",
+            background:"var(--blue-50)",borderRadius:3,margin:"0 1px"}}>{n}</sup>);
+      } else out.push(<span key={key++}>{tok}</span>);
+    });
+    return out;
+  },[md]);
+  return <p style={{margin:"4px 0",fontSize:14.5,lineHeight:1.6,color:"var(--ink)"}}>{parts}</p>;
+}
+
+/* ---------- block renderers ---------- */
+function AnswerBlock({ b, onCite }){
+  return (
+    <div className="rise" style={{border:"1px solid var(--border-2)",borderLeft:"3px solid var(--blue)",
+      borderRadius:"var(--r)",padding:"13px 16px",background:"linear-gradient(180deg,#fff,#fafcff)",margin:"4px 0"}}>
+      <div style={{fontSize:12,color:"var(--muted)",fontWeight:600,marginBottom:4}}>{b.label}</div>
+      <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap"}}>
+        <span className="tnum" style={{fontSize:30,fontWeight:700,color:"var(--navy-800)",letterSpacing:-.5}}>{b.value}</span>
+        {b.unit && <span style={{fontSize:13,color:"var(--muted)"}}>{b.unit}</span>}
+        {b.cites && b.cites.map(n=>(
+          <sup key={n} onClick={()=>onCite&&onCite(n)} title="View source"
+            style={{color:"var(--blue)",cursor:"pointer",fontWeight:700,fontSize:13,background:"var(--blue-50)",borderRadius:3,padding:"1px 4px"}}>{n}</sup>
+        ))}
+      </div>
+      {b.note && <div style={{fontSize:12.5,color:"var(--muted)",marginTop:6}}>{b.note}</div>}
+    </div>
+  );
+}
+function CitesBlock({ b, hl, onCite }){
+  return (
+    <div style={{margin:"8px 0",display:"flex",flexDirection:"column",gap:8}}>
+      {b.items.map(c=>{
+        const on=hl===c.n;
+        return (
+          <div key={c.n} id={`cite-${c.n}`} style={{border:"1px solid",borderColor:on?"var(--blue)":"var(--border)",
+            borderRadius:"var(--r)",padding:"10px 12px",background:on?"var(--blue-50)":"var(--surface-2)",
+            transition:"all .3s",boxShadow:on?"0 0 0 3px var(--blue-50)":"none"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+              <span style={{width:18,height:18,borderRadius:5,background:"var(--blue)",color:"#fff",fontSize:11,
+                fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{c.n}</span>
+              <span style={{fontSize:13,fontWeight:600,color:"var(--ink)"}}>{c.src}</span>
+              <span style={{fontSize:12,color:"var(--muted)"}}>· {c.loc}</span>
+            </div>
+            <div className="mono" style={{fontSize:11.5,color:"var(--ink-2)",background:"#fff",border:"1px dashed var(--border-2)",
+              borderRadius:4,padding:"7px 9px",lineHeight:1.5}}>{c.snippet}</div>
+            <div style={{display:"flex",alignItems:"center",gap:14,marginTop:7,fontSize:11,color:"var(--muted-2)"}}>
+              <span style={{display:"flex",alignItems:"center",gap:4,color:"var(--blue)"}}><Icon name="link" size={12}/>{c.url}</span>
+              <span className="mono">{c.checksum}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function SandboxBlock({ b }){
+  const [tab,setTab]=useState("code");
+  return (
+    <div className="rise" style={{margin:"8px 0",borderRadius:"var(--r)",overflow:"hidden",border:"1px solid var(--navy-900)",boxShadow:"var(--sh-2)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--navy-900)"}}>
+        <Icon name="code" size={15} style={{color:"var(--green)"}}/>
+        <span style={{fontSize:12,color:"#cdd8ec",fontWeight:600}}>{b.title}</span>
+        <div style={{marginLeft:"auto",display:"flex",gap:4}}>
+          {["code","output"].map(tk=>(
+            <button key={tk} onClick={()=>setTab(tk)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:5,
+              border:"none",cursor:"pointer",textTransform:"capitalize",
+              background:tab===tk?"var(--navy-600)":"transparent",color:tab===tk?"#fff":"#7d8cab"}}>{tk}</button>
+          ))}
+        </div>
+      </div>
+      <pre className="mono" style={{margin:0,padding:"13px 15px",background:"#0a1322",color: tab==="code"?"#d6e2f5":"#9fe8c4",
+        fontSize:12,lineHeight:1.65,overflowX:"auto",whiteSpace:"pre"}}>
+        {tab==="code"? b.code : "$ python compute.py\n"+b.output}
+      </pre>
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px",background:"var(--navy-900)",fontSize:11,color:"#7d8cab"}}>
+        <Dot color="var(--green)"/><span>exit 0 · sandbox=gVisor · network-isolated · 8 vCPU</span>
+      </div>
+    </div>
+  );
+}
+function ChartBlock({ b }){
+  return (
+    <Card pad={15} style={{margin:"8px 0"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+        <Icon name="chart" size={15} style={{color:"var(--blue)"}}/>
+        <span style={{fontSize:13,fontWeight:600,color:"var(--ink)"}}>{b.title}</span>
+        <Badge tone="blue" style={{marginLeft:"auto"}}>Auto-selected: {b.chart==="line"?"area":"bar"}</Badge>
+      </div>
+      {b.chart==="bar" && <BarChart data={b.data} fmt={b.fmt} unit={b.unit}/>}
+      {b.chart==="line" && (<><AreaLine data={b.data}/><div style={{fontSize:10.5,color:"var(--muted-2)",marginTop:6}}>{b.unit}</div></>)}
+    </Card>
+  );
+}
+function CompareBlock({ b, onCite }){
+  const max=Math.max(...b.rows.map(r=>r.v));
+  return (
+    <Card pad={15} style={{margin:"8px 0"}}>
+      <div style={{fontSize:13,fontWeight:600,color:"var(--ink)",marginBottom:12}}>{b.title}
+        {b.cites&&b.cites.map(n=><sup key={n} onClick={()=>onCite&&onCite(n)} style={{color:"var(--blue)",cursor:"pointer",fontWeight:700,marginLeft:3}}>{n}</sup>)}</div>
+      <HBars data={b.rows} fmt={(v)=>v+"%"} max={max*1.12}/>
+      {b.note && <div style={{fontSize:12.5,color:"var(--muted)",marginTop:12,paddingTop:10,borderTop:"1px solid var(--border)"}}>{b.note}</div>}
+    </Card>
+  );
+}
+function TableBlock({ b, onCite }){
+  return (
+    <Card pad={0} style={{margin:"8px 0",overflow:"hidden"}}>
+      <div style={{padding:"11px 15px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:8}}>
+        <Icon name="table" size={15} style={{color:"var(--blue)"}}/>
+        <span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
+        {b.cites&&b.cites.map(n=><sup key={n} onClick={()=>onCite&&onCite(n)} style={{color:"var(--blue)",cursor:"pointer",fontWeight:700}}>{n}</sup>)}
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+          <thead><tr>{b.cols.map((c,i)=><th key={i} style={{textAlign:i?"left":"left",padding:"9px 15px",
+            background:"var(--surface-2)",color:"var(--muted)",fontWeight:600,fontSize:11.5,textTransform:"uppercase",
+            letterSpacing:.4,borderBottom:"1px solid var(--border)",whiteSpace:"nowrap"}}>{c}</th>)}</tr></thead>
+          <tbody>{b.rows.map((r,ri)=>(
+            <tr key={ri} style={{borderBottom:"1px solid var(--surface-3)"}}>
+              {r.map((cell,ci)=><td key={ci} className={ci>1&&ci<4?"tnum":""} style={{padding:"9px 15px",
+                color:ci===0?"var(--ink)":"var(--ink-2)",fontWeight:ci===0?600:400,
+                ...(ci===4?{color:"var(--saffron)",fontWeight:600,whiteSpace:"nowrap"}:{})}}>{cell}</td>)}
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+      {b.note && <div style={{padding:"9px 15px",fontSize:12,color:"var(--muted)",background:"var(--surface-2)",borderTop:"1px solid var(--border)"}}>{b.note}</div>}
+    </Card>
+  );
+}
+function JoinReportBlock({ b }){
+  return (
+    <Card pad={15} style={{margin:"8px 0",borderLeft:"3px solid var(--saffron)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+        <Icon name="layers" size={15} style={{color:"var(--saffron)"}}/>
+        <span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
+      </div>
+      <div className="mono" style={{fontSize:11.5,color:"var(--muted)",marginBottom:10,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <Badge tone="navy">{b.left}</Badge><span style={{color:"var(--saffron)",fontWeight:700}}>⋈</span>
+        <Badge tone="navy">{b.right}</Badge><span>on</span><Badge tone="saffron">{b.on}</Badge>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px 18px"}}>
+        {b.rows.map((r,i)=>(
+          <div key={i} style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:12.5,
+            padding:"5px 0",borderBottom:"1px dotted var(--border-2)"}}>
+            <span style={{color:"var(--muted)"}}>{r.k}</span>
+            <span className="tnum" style={{fontWeight:600,color:r.k.startsWith("Dropped")?"var(--red)":"var(--ink)",textAlign:"right"}}>{r.v}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+function PdfBlock({ b }){
+  return (
+    <Card pad={0} style={{margin:"8px 0",overflow:"hidden"}}>
+      <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:8,background:"var(--surface-2)"}}>
+        <Icon name="doc" size={15} style={{color:"var(--red)"}}/>
+        <span style={{fontSize:12.5,fontWeight:600}}>{b.title}</span>
+        <Badge tone="red" style={{marginLeft:"auto"}}>source PDF</Badge>
+      </div>
+      <div style={{padding:"14px",background:"#e9edf3"}}>
+        <div style={{background:"#fff",border:"1px solid var(--border-2)",borderRadius:4,boxShadow:"var(--sh-2)",
+          padding:"22px 26px",maxWidth:520,margin:"0 auto"}}>
+          <div style={{fontSize:11,color:"var(--muted-2)",marginBottom:14,letterSpacing:.3}}>{b.page}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:9}}>
+            {b.lines.map((l,i)=>(
+              <div key={i} className="mono" style={{fontSize:12.5,lineHeight:1.5,
+                color:l.dim?"var(--muted-2)":(l.h?"var(--navy-900)":"var(--ink-2)"),fontWeight:l.h?700:400,
+                background:l.h?"var(--saffron-tint)":"transparent",
+                boxShadow:l.h?"0 0 0 6px var(--saffron-tint)":"none",borderRadius:l.h?2:0}}>{l.t}</div>
+            ))}
+          </div>
+        </div>
+        <div style={{textAlign:"center",fontSize:11,color:"var(--muted)",marginTop:10}}>↑ exact table row highlighted at the cited page coordinates</div>
+      </div>
+    </Card>
+  );
+}
+function CanonicalBlock({ b }){
+  return (
+    <Card pad={15} style={{margin:"8px 0"}}>
+      <div style={{fontSize:13,fontWeight:600,marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+        <Icon name="globe" size={15} style={{color:"var(--green)"}}/>{b.title}</div>
+      <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+        <tbody>{b.rows.map((r,i)=>(
+          <tr key={i} style={{borderBottom:"1px solid var(--surface-3)"}}>
+            <td style={{padding:"8px 10px 8px 0",fontWeight:600,color:"var(--ink)",width:"40%"}}>{r[0]}</td>
+            <td style={{padding:"8px 0",color:"var(--muted)"}}><Icon name="chevR" size={12} style={{display:"inline",verticalAlign:"middle",color:"var(--green)"}}/> {r[1]}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </Card>
+  );
+}
+function RefusalBlock({ b }){
+  const tone = b.tone==="red"?{bd:"var(--red)",bg:"var(--red-50)",ic:"var(--red)"}:{bd:"var(--amber)",bg:"var(--amber-50)",ic:"var(--amber)"};
+  return (
+    <div className="rise" style={{margin:"8px 0",border:"1px solid",borderColor:tone.bd,borderLeft:`4px solid ${tone.bd}`,
+      borderRadius:"var(--r)",background:tone.bg,padding:"14px 16px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}>
+        <Icon name={b.icon} size={19} style={{color:tone.ic}}/>
+        <span style={{fontSize:14.5,fontWeight:700,color:"var(--ink)"}}>{b.title}</span>
+      </div>
+      <RichText md={b.body}/>
+      {b.bullets && <ul style={{margin:"8px 0 0",paddingLeft:18,fontSize:13,color:"var(--ink-2)",lineHeight:1.7}}>
+        {b.bullets.map((x,i)=><li key={i}>{x}</li>)}</ul>}
+      {b.violations && <div style={{display:"flex",flexDirection:"column",gap:7,marginTop:10}}>
+        {b.violations.map((v,i)=>(
+          <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",background:"#fff",borderRadius:5,padding:"8px 11px",border:"1px solid var(--border)"}}>
+            <Badge tone="red" soft={false} style={{marginTop:1}}>{v.tag}</Badge>
+            <span style={{fontSize:12.5,color:"var(--ink-2)"}}>{v.d}</span>
+          </div>
+        ))}</div>}
+      {b.foot && <div style={{marginTop:10,paddingTop:9,borderTop:`1px solid ${tone.bd}33`,fontSize:12.5,color:"var(--ink-2)"}}>{b.foot}</div>}
+    </div>
+  );
+}
+function ClarifyBlock({ b, onGenerate }){
+  const [sel,setSel]=useState({});
+  const pick=(g,c)=>setSel(s=>({...s,[g]:c}));
+  const ready=Object.keys(sel).length>=2;
+  return (
+    <div className="rise" style={{margin:"8px 0",border:"1px solid var(--blue-100)",borderLeft:"4px solid var(--blue)",
+      borderRadius:"var(--r)",background:"var(--blue-tint)",padding:"14px 16px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:5}}>
+        <Icon name="ask" size={18} style={{color:"var(--blue)"}}/>
+        <span style={{fontSize:14.5,fontWeight:700,color:"var(--ink)"}}>{b.title}</span>
+      </div>
+      <p style={{margin:"0 0 12px",fontSize:13.5,color:"var(--ink-2)"}}>{b.body}</p>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {b.groups.map((g,gi)=>(
+          <div key={gi}>
+            <div style={{fontSize:11.5,fontWeight:600,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5,marginBottom:7}}>{g.label}</div>
+            <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+              {g.chips.map((c,ci)=>{
+                const on=sel[g.label]===c;
+                return <button key={ci} onClick={()=>pick(g.label,c)} style={{fontSize:12.5,fontWeight:500,
+                  padding:"6px 12px",borderRadius:20,border:"1px solid",cursor:"pointer",transition:"all .15s",
+                  borderColor:on?"var(--blue)":"var(--border-2)",background:on?"var(--blue)":"#fff",color:on?"#fff":"var(--ink-2)"}}>{c}</button>;
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginTop:14}}>
+        <button disabled={!ready} onClick={()=>onGenerate&&onGenerate(sel)} style={{fontSize:13,fontWeight:600,
+          padding:"9px 18px",borderRadius:"var(--r)",border:"none",cursor:ready?"pointer":"not-allowed",
+          background:ready?"var(--blue)":"var(--border-2)",color:"#fff",opacity:ready?1:.7,transition:"all .15s"}}>
+          Generate answer →</button>
+        <span style={{fontSize:11.5,color:"var(--muted)"}}>{b.note}</span>
+      </div>
+    </div>
+  );
+}
+function TraceBlock({ b }){
+  return (
+    <Card pad={15} style={{margin:"8px 0"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+        <Icon name="branch" size={15} style={{color:"var(--blue)"}}/><span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
+        <Badge tone="green" style={{marginLeft:"auto"}}>reproducible</Badge>
+      </div>
+      <div style={{display:"flex",alignItems:"stretch",gap:0,flexWrap:"wrap"}}>
+        {b.steps.map((s,i)=>(
+          <React.Fragment key={i}>
+            <div style={{flex:"1 1 130px",minWidth:130,background:"var(--surface-2)",border:"1px solid var(--border)",
+              borderRadius:"var(--r)",padding:"10px 12px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
+                <Icon name="check" size={13} style={{color:"var(--green)"}}/>
+                <span style={{fontSize:12.5,fontWeight:700,color:"var(--navy-800)"}}>{s.s}</span>
+              </div>
+              <div style={{fontSize:11.5,color:"var(--muted)",lineHeight:1.4,marginBottom:6}}>{s.d}</div>
+              <span className="mono" style={{fontSize:11,color:"var(--blue)",fontWeight:600}}>{s.ms} ms</span>
+            </div>
+            {i<b.steps.length-1 && <div style={{display:"flex",alignItems:"center",padding:"0 4px"}}><Icon name="chevR" size={16} style={{color:"var(--border-strong)"}}/></div>}
+          </React.Fragment>
+        ))}
+      </div>
+    </Card>
+  );
+}
+/* ---------- causal: recursive driver decomposition (RFP §3.1.5 g) ---------- */
+function DriversBlock({ b, onCite }){
+  const max=Math.max(...b.drivers.map(d=>Math.abs(d.v)));
+  return (
+    <Card pad={15} style={{margin:"8px 0",borderLeft:"3px solid var(--blue)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+        <Icon name="branch" size={15} style={{color:"var(--blue)"}}/>
+        <span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
+        {b.cites&&b.cites.map(n=><sup key={n} onClick={()=>onCite&&onCite(n)} style={{color:"var(--blue)",cursor:"pointer",fontWeight:700,marginLeft:2}}>{n}</sup>)}
+      </div>
+      <div style={{fontSize:11.5,color:"var(--muted)",marginBottom:14}}>{b.baseline}</div>
+      <div style={{display:"flex",flexDirection:"column",gap:11}}>
+        {b.drivers.map((d,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:172,fontSize:12.5,color:"var(--ink-2)",textAlign:"right",flexShrink:0,lineHeight:1.25}}>{d.k}</div>
+            <div style={{flex:1,height:18,background:"var(--surface-3)",borderRadius:4,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${(Math.abs(d.v)/max)*100}%`,background:d.v<0?"var(--red)":"var(--green)",borderRadius:4,animation:`growW .8s cubic-bezier(.2,.7,.3,1) ${i*0.07}s both`}}/>
+            </div>
+            <div className="tnum" style={{width:62,fontSize:12.5,fontWeight:700,color:d.v<0?"var(--red)":"var(--green)",flexShrink:0}}>{d.v>0?"+":""}{d.v} pp</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:13,paddingTop:11,borderTop:"1px solid var(--border)"}}>
+        <span style={{fontSize:12.5,fontWeight:600,color:"var(--ink)"}}>{b.totalLabel}</span>
+        <span className="tnum" style={{fontSize:14,fontWeight:700,color:"var(--navy-800)"}}>{b.total}</span>
+      </div>
+      {b.note && <div style={{fontSize:11.5,color:"var(--muted)",marginTop:8,lineHeight:1.5}}>{b.note}</div>}
+    </Card>
+  );
+}
+/* ---------- causal → recommendations ---------- */
+function RecommendBlock({ b }){
+  const TONE={High:["var(--red-50)","var(--red)"],Medium:["var(--amber-50)","var(--amber)"],Low:["var(--green-50)","var(--green)"]};
+  return (
+    <Card pad={15} style={{margin:"8px 0",borderLeft:"3px solid var(--saffron)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+        <Icon name="target" size={15} style={{color:"var(--saffron)"}}/>
+        <span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
+        <Badge tone="amber" style={{marginLeft:"auto"}}>model recommendation</Badge>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:9}}>
+        {b.items.map((r,i)=>{
+          const tn=TONE[r.priority]||TONE.Medium;
+          return (
+            <div key={i} style={{display:"flex",gap:11,alignItems:"flex-start",background:"var(--surface-2)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:"10px 12px"}}>
+              <span style={{width:20,height:20,borderRadius:6,background:"var(--navy-800)",color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--ink)"}}>{r.action}</div>
+                <div style={{fontSize:11.5,color:"var(--muted)",marginTop:2,lineHeight:1.45}}>{r.why}</div>
+              </div>
+              <span style={{fontSize:10.5,fontWeight:700,letterSpacing:.4,textTransform:"uppercase",color:tn[1],background:tn[0],borderRadius:20,padding:"3px 9px",flexShrink:0}}>{r.priority}</span>
+            </div>
+          );
+        })}
+      </div>
+      {b.foot && <div style={{marginTop:11,paddingTop:10,borderTop:"1px solid var(--border)",fontSize:11.5,color:"var(--muted)",lineHeight:1.5}}>{b.foot}</div>}
+    </Card>
+  );
+}
+/* ---------- complex-query capability badge (RFP §3.3.3) ---------- */
+function ComplexityBlock({ b }){
+  const active=b.active||[];
+  return (
+    <div style={{margin:"8px 0",border:"1px solid var(--border)",borderRadius:"var(--r)",background:"var(--surface-2)",padding:"11px 13px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+        <Icon name="layers" size={14} style={{color:"var(--saffron)"}}/>
+        <span style={{fontSize:12,fontWeight:700,color:"var(--ink)"}}>Complex query</span>
+        <span style={{fontSize:11.5,color:"var(--muted)"}}>· {active.length} / 5 capabilities engaged (≥3 required)</span>
+      </div>
+      <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+        {COMPLEX_FEATURES.map(f=>{
+          const on=active.includes(f.id);
+          return (
+            <span key={f.id} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:600,padding:"4px 10px",borderRadius:20,
+              border:"1px solid",borderColor:on?"var(--green)":"var(--border)",background:on?"var(--green-50)":"#fff",color:on?"var(--green)":"var(--muted-2)"}}>
+              <Icon name={on?"check":"close"} size={11}/>{f.label}</span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+function LogsBlock(){
+  const streams=[["ETL & Pipeline","etl","var(--green)"],["User Activity","user","var(--blue)"],["Inference","inf","var(--saffron)"]];
+  return (
+    <div style={{margin:"8px 0",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10}}>
+      {streams.map(([title,key,col])=>(
+        <div key={key} style={{borderRadius:"var(--r)",overflow:"hidden",border:"1px solid var(--navy-900)"}}>
+          <div style={{padding:"7px 11px",background:"var(--navy-900)",display:"flex",alignItems:"center",gap:7}}>
+            <Dot color={col} pulse/><span style={{fontSize:11.5,fontWeight:600,color:"#cdd8ec"}}>{title}</span>
+          </div>
+          <div className="mono" style={{padding:"9px 11px",background:"#0a1322",display:"flex",flexDirection:"column",gap:6,minHeight:120}}>
+            {LOG_STREAMS[key].map((l,i)=><span key={i} style={{fontSize:10.5,color:"#8fa4c6",lineHeight:1.4,wordBreak:"break-word"}}>{l}</span>)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Block({ b, hl, onCite, onGenerate }){
+  switch(b.type){
+    case "answer": return <AnswerBlock b={b} onCite={onCite}/>;
+    case "text": return <RichText md={b.md} onCite={onCite}/>;
+    case "cites": return <CitesBlock b={b} hl={hl} onCite={onCite}/>;
+    case "sandbox": return <SandboxBlock b={b}/>;
+    case "chart": return <ChartBlock b={b}/>;
+    case "compare": return <CompareBlock b={b} onCite={onCite}/>;
+    case "table": return <TableBlock b={b} onCite={onCite}/>;
+    case "joinreport": return <JoinReportBlock b={b}/>;
+    case "pdf": return <PdfBlock b={b}/>;
+    case "canonical": return <CanonicalBlock b={b}/>;
+    case "refusal": return <RefusalBlock b={b}/>;
+    case "clarify": return <ClarifyBlock b={b} onGenerate={onGenerate}/>;
+    case "trace": return <TraceBlock b={b}/>;
+    case "drivers": return <DriversBlock b={b} onCite={onCite}/>;
+    case "recommend": return <RecommendBlock b={b}/>;
+    case "complexity": return <ComplexityBlock b={b}/>;
+    case "logs": return <LogsBlock/>;
+    default: return null;
+  }
+}
+
+Object.assign(window, {
+  AgentAvatar, RoutePills, ThinkTrace, RichText, Block,
+});
