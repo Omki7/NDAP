@@ -6,12 +6,13 @@ const NAV=[
   { id:"home", icon:"home", key:"nav_home" },
   { id:"ask", icon:"ask", key:"nav_ask" },
   { id:"data", icon:"data", key:"nav_data" },
+  { id:"analytics", icon:"analytics", key:"nav_analytics" },
   { id:"studio", icon:"studio", key:"nav_studio" },
 ];
 const ROUTE_TITLE={
   home:{en:"Home",hi:"मुख पृष्ठ"}, ask:{en:"Ask NDAP",hi:"NDAP से पूछें"},
   data:{en:"Datasets & MDM",hi:"डेटासेट और MDM"}, studio:{en:"AI Studio",hi:"AI स्टूडियो"},
-  analytics:{en:"Analytics",hi:"विश्लेषण"},
+  analytics:{en:"Visualizations & Analytics",hi:"विज़ुअलाइज़ेशन और विश्लेषण"},
 };
 
 /* ---------- Sidebar ---------- */
@@ -42,8 +43,7 @@ function Sidebar({ route, go, lang }){
       </div>
       {/* system status */}
       <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.08)",fontSize:11,color:"#7e8fb0"}}>
-        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}><Dot color="#1fb98a" pulse/><span style={{color:"#bccadf",fontWeight:600}}>Platform Status: Operational</span></div>
-        <div className="mono" style={{fontSize:10.5,lineHeight:1.5}}>Version 2.3 · Last updated: Jun 2026</div>
+        <div style={{display:"flex",alignItems:"center",gap:7}}><Dot color="#1fb98a" pulse/><span style={{color:"#bccadf",fontWeight:600}}>Operational</span></div>
       </div>
     </nav>
   );
@@ -195,6 +195,7 @@ function App(){
           {route==="home" && <HomeView go={go} lang={lang}/>}
           {route==="ask" && <ChatView lang={lang}/>}
           {route==="data" && <DataView/>}
+          {route==="analytics" && <VisualizationsView lang={lang}/>}
           {route==="studio" && <StudioView/>}
         </main>
       </div>

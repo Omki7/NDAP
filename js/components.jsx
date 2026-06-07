@@ -79,14 +79,12 @@ function Emblem({ size=34, color="#c98a2b", ring="#0b2552" }){
 }
 function Wordmark({ lang="en", compact=false }){
   return (
-    <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <img src="https://ndap.niti.gov.in/static/assets/images/india-emblem-2.png" alt="India Emblem" width={compact?24:34} height={compact?36:51} />
-      {!compact && (
-        <div style={{lineHeight:1.15}}>
-          <div style={{fontWeight:700,fontSize:14,letterSpacing:.2,color:"#fff"}}>National Data and</div>
-          <div style={{fontWeight:700,fontSize:14,letterSpacing:.2,color:"#fff"}}>Analytics Platform</div>
-        </div>
-      )}
+    <div style={{display:"flex",alignItems:"center"}}>
+      <img
+        src="ndap_logo.png"
+        alt="NDAP — National Data and Analytics Platform"
+        style={{height:compact?28:40,width:"auto",objectFit:"contain",display:"block"}}
+      />
     </div>
   );
 }

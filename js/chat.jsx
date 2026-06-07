@@ -32,6 +32,8 @@ function RoutePills({ route, n }){
     </div>
   );
 }
+
+/* Analysis trace — collapsible, shows query steps */
 function ThinkTrace({ think, n, done }){
   const [open,setOpen]=useState(true);
   useEffect(()=>{ if(done) setOpen(false); },[done]);
@@ -39,9 +41,9 @@ function ThinkTrace({ think, n, done }){
   return (
     <div style={{margin:"10px 0 4px",border:"1px solid var(--border)",borderRadius:"var(--r)",background:"var(--surface-2)",overflow:"hidden"}}>
       <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,
-        padding:"8px 12px",background:"none",border:"none",color:"var(--muted)",fontSize:12,fontWeight:600}}>
+        padding:"8px 12px",background:"none",border:"none",color:"var(--muted)",fontSize:12,fontWeight:600,cursor:"pointer"}}>
         <Icon name="bolt" size={14} style={{color:"var(--saffron)"}}/>
-        <span>Reasoning trace</span>
+        <span>Analysis trace</span>
         <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
           {!done && <Dot color="var(--saffron)" pulse/>}
           <Icon name={open?"chevD":"chevR"} size={13}/>
@@ -52,7 +54,7 @@ function ThinkTrace({ think, n, done }){
           {think.slice(0,n).map((s,i)=>(
             <div key={i} className="fade-in" style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:12.5,color:"var(--ink-2)"}}>
               <Icon name={i<n-1||done?"check":"clock"} size={13} style={{color:i<n-1||done?"var(--green)":"var(--muted-2)",marginTop:2,flexShrink:0}}/>
-              <span className="mono" style={{fontSize:12}}>{s}</span>
+              <span style={{fontSize:12,lineHeight:1.5}}>{s}</span>
             </div>
           ))}
         </div>
@@ -63,7 +65,6 @@ function ThinkTrace({ think, n, done }){
 
 /* ---------- citation superscript text ---------- */
 function RichText({ md, onCite }){
-  /* supports **bold**, *italic*, [n] citation refs */
   const parts = useMemo(()=>{
     const out=[]; let key=0;
     const tokens = md.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[\d+\])/g);
@@ -79,6 +80,12 @@ function RichText({ md, onCite }){
     return out;
   },[md]);
   return <p style={{margin:"4px 0",fontSize:14.5,lineHeight:1.6,color:"var(--ink)"}}>{parts}</p>;
+}
+
+/* ---------- helper: is this citation from a document (PDF/report) or a database? ---------- */
+function isDocSource(cite){
+  const url = cite.url || '';
+  return url.includes('.pdf') || url.includes('rchiips.org') || url.includes('/doc/') || url.includes('indiabudget.gov.in/doc');
 }
 
 /* ---------- block renderers ---------- */
@@ -99,26 +106,98 @@ function AnswerBlock({ b, onCite }){
     </div>
   );
 }
-function CitesBlock({ b, hl, onCite }){
+
+/* ---------- Citations — two distinct treatments: structured database vs source document ---------- */
+function CitesBlock({ b, hl, onCite, onOpenPDF }){
   return (
-    <div style={{margin:"8px 0",display:"flex",flexDirection:"column",gap:8}}>
+    <div style={{margin:"8px 0",display:"flex",flexDirection:"column",gap:10}}>
       {b.items.map(c=>{
         const on=hl===c.n;
+        const isDoc=isDocSource(c);
         return (
-          <div key={c.n} id={`cite-${c.n}`} style={{border:"1px solid",borderColor:on?"var(--blue)":"var(--border)",
-            borderRadius:"var(--r)",padding:"10px 12px",background:on?"var(--blue-50)":"var(--surface-2)",
-            transition:"all .3s",boxShadow:on?"0 0 0 3px var(--blue-50)":"none"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-              <span style={{width:18,height:18,borderRadius:5,background:"var(--blue)",color:"#fff",fontSize:11,
-                fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{c.n}</span>
-              <span style={{fontSize:13,fontWeight:600,color:"var(--ink)"}}>{c.src}</span>
-              <span style={{fontSize:12,color:"var(--muted)"}}>· {c.loc}</span>
+          <div key={c.n} id={`cite-${c.n}`} style={{
+            border:"1px solid",
+            borderColor:on?(isDoc?"var(--saffron)":"var(--blue)"):"var(--border)",
+            borderLeft:`3px solid ${on?(isDoc?"var(--saffron)":"var(--blue)"):(isDoc?"var(--saffron-tint)":"var(--blue-100)")}`,
+            borderRadius:"var(--r)",
+            background:on?(isDoc?"var(--saffron-50)":"var(--blue-50)"):"var(--surface)",
+            transition:"all .3s",
+            boxShadow:on?"0 0 0 3px "+(isDoc?"var(--saffron-50)":"var(--blue-50)"):"none",
+          }}>
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px 7px",borderBottom:"1px solid var(--border)"}}>
+              <div style={{width:22,height:22,borderRadius:5,background:isDoc?"#c0392b":"var(--blue)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <Icon name={isDoc?"doc":"data"} size={12} style={{color:"#fff"}}/>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:13,fontWeight:700,color:"var(--ink)"}}>{c.src}</span>
+                  <span style={{
+                    fontSize:10,fontWeight:700,letterSpacing:.3,textTransform:"uppercase",
+                    padding:"1px 7px",borderRadius:9,
+                    background:isDoc?"var(--saffron-50)":"var(--blue-50)",
+                    color:isDoc?"var(--saffron)":"var(--blue-700)",
+                    border:`1px solid ${isDoc?"var(--saffron-tint)":"var(--blue-100)"}`,
+                  }}>
+                    {isDoc?"Source document":"Structured database"}
+                  </span>
+                  <span style={{
+                    fontSize:10,fontWeight:600,padding:"1px 7px",borderRadius:9,
+                    background:"var(--green-50)",color:"var(--green)",
+                    border:"1px solid var(--green-tint)",
+                  }}>Verified</span>
+                </div>
+                <div style={{fontSize:11.5,color:"var(--muted)",marginTop:2}}>{c.loc}</div>
+              </div>
+              <sup onClick={()=>onCite&&onCite(c.n)} title="Jump to citation"
+                style={{width:18,height:18,borderRadius:5,background:on?"var(--blue)":"var(--border-2)",color:on?"#fff":"var(--muted)",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,transition:"all .15s"}}>{c.n}</sup>
             </div>
-            <div className="mono" style={{fontSize:11.5,color:"var(--ink-2)",background:"#fff",border:"1px dashed var(--border-2)",
-              borderRadius:4,padding:"7px 9px",lineHeight:1.5}}>{c.snippet}</div>
-            <div style={{display:"flex",alignItems:"center",gap:14,marginTop:7,fontSize:11,color:"var(--muted-2)"}}>
-              <span style={{display:"flex",alignItems:"center",gap:4,color:"var(--blue)"}}><Icon name="link" size={12}/>{c.url}</span>
-              <span className="mono">{c.checksum}</span>
+
+            {/* Data snippet */}
+            <div style={{padding:"8px 12px"}}>
+              <div style={{
+                fontSize:isDoc?13:12,lineHeight:1.55,
+                color:"var(--ink-2)",
+                fontStyle:isDoc?"italic":"normal",
+                fontFamily:isDoc?"inherit":"var(--mono)",
+                background:isDoc?"#fffde7":"var(--surface-2)",
+                border:`1px ${isDoc?"solid":"dashed"} ${isDoc?"#f9e68a":"var(--border-2)"}`,
+                borderRadius:4,
+                padding:"8px 11px",
+              }}>
+                {isDoc?`"${c.snippet}"`:c.snippet}
+              </div>
+            </div>
+
+            {/* Footer — actions differ by type */}
+            <div style={{padding:"6px 12px 9px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              {isDoc?(
+                <>
+                  {/* Document: show link + Ask this document */}
+                  <span style={{fontSize:10.5,color:"var(--muted)",display:"flex",alignItems:"center",gap:4,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    <Icon name="link" size={11} style={{flexShrink:0}}/>{c.url}
+                  </span>
+                  {onOpenPDF&&<button onClick={()=>onOpenPDF(c)} style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,color:"#c0392b",background:"#fff",border:"1px solid #e8c0bc",borderRadius:20,padding:"3px 9px",cursor:"pointer",flexShrink:0,transition:"background .12s"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#fff5f4"}
+                    onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                    <Icon name="ask" size={10}/>Ask this document
+                  </button>}
+                </>
+              ):(
+                <>
+                  {/* Structured: show checksum only, no link */}
+                  <span style={{fontSize:10.5,color:"var(--muted-2)",display:"flex",alignItems:"center",gap:4}}>
+                    <Icon name="shield" size={11} style={{color:"var(--green)",flexShrink:0}}/>
+                    <span className="mono">{c.checksum}</span>
+                  </span>
+                  <span style={{marginLeft:"auto",fontSize:10.5,fontWeight:600,color:"var(--muted)",display:"flex",alignItems:"center",gap:3}}>
+                    <Icon name="data" size={10}/>Database record · no external link
+                  </span>
+                </>
+              )}
+              {isDoc&&<span style={{fontSize:10.5,color:"var(--muted-2)",display:"flex",alignItems:"center",gap:3,marginLeft:"auto"}}>
+                <span className="mono">{c.checksum}</span>
+              </span>}
             </div>
           </div>
         );
@@ -126,6 +205,8 @@ function CitesBlock({ b, hl, onCite }){
     </div>
   );
 }
+
+/* ---------- Sandbox / computation block ---------- */
 function SandboxBlock({ b }){
   const [tab,setTab]=useState("code");
   return (
@@ -146,35 +227,69 @@ function SandboxBlock({ b }){
         {tab==="code"? b.code : "$ python compute.py\n"+b.output}
       </pre>
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px",background:"var(--navy-900)",fontSize:11,color:"#7d8cab"}}>
-        <Dot color="var(--green)"/><span>exit 0 · sandbox=gVisor · network-isolated · 8 vCPU</span>
+        <Dot color="var(--green)"/><span>Exit 0 · Isolated execution environment · Network-restricted</span>
       </div>
     </div>
   );
 }
+
+/* ---------- Chart block — owns its own type switcher ---------- */
 function ChartBlock({ b }){
+  const availableTypes = b.data ? ["bar","line","area"] : ["bar","line"];
+  const [type,setType] = useState(b.chart || "bar");
+  const lineData = b.data ? b.data.map(d=>d.v) : [];
+
   return (
     <Card pad={15} style={{margin:"8px 0"}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
         <Icon name="chart" size={15} style={{color:"var(--blue)"}}/>
-        <span style={{fontSize:13,fontWeight:600,color:"var(--ink)"}}>{b.title}</span>
-        <Badge tone="blue" style={{marginLeft:"auto"}}>Auto-selected: {b.chart==="line"?"area":"bar"}</Badge>
+        <span style={{fontSize:13,fontWeight:600,color:"var(--ink)",flex:1}}>{b.title}</span>
+        <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+          {availableTypes.map(t=>(
+            <button key={t} onClick={()=>setType(t)} style={{padding:"3px 9px",fontSize:11,fontWeight:600,border:"1px solid",borderRadius:20,cursor:"pointer",transition:"all .12s",
+              borderColor:type===t?"var(--blue)":"var(--border)",
+              background:type===t?"var(--blue-50)":"transparent",
+              color:type===t?"var(--blue-700)":"var(--muted)"}}>{t}</button>
+          ))}
+        </div>
       </div>
-      {b.chart==="bar" && <BarChart data={b.data} fmt={b.fmt} unit={b.unit}/>}
-      {b.chart==="line" && (<><AreaLine data={b.data}/><div style={{fontSize:10.5,color:"var(--muted-2)",marginTop:6}}>{b.unit}</div></>)}
+      {(type==="line"||type==="area")&&lineData.length>0?(
+        <><AreaLine data={lineData} color="var(--blue)" fill={type==="area"?"rgba(46,107,214,.12)":"rgba(0,0,0,0)"} showDots={type==="line"}/><div style={{fontSize:10.5,color:"var(--muted-2)",marginTop:6}}>{b.unit}</div></>
+      ):(
+        <BarChart data={b.data||[]} fmt={b.fmt||(v=>String(v))} unit={b.unit}/>
+      )}
     </Card>
   );
 }
+
+/* ---------- Compare block — switchable bar / horizontal ---------- */
 function CompareBlock({ b, onCite }){
+  const [view,setView]=useState("hbar");
   const max=Math.max(...b.rows.map(r=>r.v));
   return (
     <Card pad={15} style={{margin:"8px 0"}}>
-      <div style={{fontSize:13,fontWeight:600,color:"var(--ink)",marginBottom:12}}>{b.title}
-        {b.cites&&b.cites.map(n=><sup key={n} onClick={()=>onCite&&onCite(n)} style={{color:"var(--blue)",cursor:"pointer",fontWeight:700,marginLeft:3}}>{n}</sup>)}</div>
-      <HBars data={b.rows} fmt={(v)=>v+"%"} max={max*1.12}/>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+        <span style={{fontSize:13,fontWeight:600,color:"var(--ink)",flex:1}}>{b.title}
+          {b.cites&&b.cites.map(n=><sup key={n} onClick={()=>onCite&&onCite(n)} style={{color:"var(--blue)",cursor:"pointer",fontWeight:700,marginLeft:3}}>{n}</sup>)}</span>
+        <div style={{display:"flex",gap:4,flexShrink:0}}>
+          {[["hbar","Horizontal"],["bar","Vertical"]].map(([k,label])=>(
+            <button key={k} onClick={()=>setView(k)} style={{padding:"3px 9px",fontSize:11,fontWeight:600,border:"1px solid",borderRadius:20,cursor:"pointer",transition:"all .12s",
+              borderColor:view===k?"var(--blue)":"var(--border)",
+              background:view===k?"var(--blue-50)":"transparent",
+              color:view===k?"var(--blue-700)":"var(--muted)"}}>{label}</button>
+          ))}
+        </div>
+      </div>
+      {view==="hbar"?(
+        <HBars data={b.rows} fmt={(v)=>v+"%"} max={max*1.12}/>
+      ):(
+        <BarChart data={b.rows.map(r=>({k:r.k,v:r.v,color:r.color}))} fmt={(v)=>v+"%"} color="var(--blue)"/>
+      )}
       {b.note && <div style={{fontSize:12.5,color:"var(--muted)",marginTop:12,paddingTop:10,borderTop:"1px solid var(--border)"}}>{b.note}</div>}
     </Card>
   );
 }
+
 function TableBlock({ b, onCite }){
   return (
     <Card pad={0} style={{margin:"8px 0",overflow:"hidden"}}>
@@ -185,7 +300,7 @@ function TableBlock({ b, onCite }){
       </div>
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-          <thead><tr>{b.cols.map((c,i)=><th key={i} style={{textAlign:i?"left":"left",padding:"9px 15px",
+          <thead><tr>{b.cols.map((c,i)=><th key={i} style={{textAlign:"left",padding:"9px 15px",
             background:"var(--surface-2)",color:"var(--muted)",fontWeight:600,fontSize:11.5,textTransform:"uppercase",
             letterSpacing:.4,borderBottom:"1px solid var(--border)",whiteSpace:"nowrap"}}>{c}</th>)}</tr></thead>
           <tbody>{b.rows.map((r,ri)=>(
@@ -201,6 +316,7 @@ function TableBlock({ b, onCite }){
     </Card>
   );
 }
+
 function JoinReportBlock({ b }){
   return (
     <Card pad={15} style={{margin:"8px 0",borderLeft:"3px solid var(--saffron)"}}>
@@ -224,13 +340,14 @@ function JoinReportBlock({ b }){
     </Card>
   );
 }
+
 function PdfBlock({ b }){
   return (
     <Card pad={0} style={{margin:"8px 0",overflow:"hidden"}}>
       <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:8,background:"var(--surface-2)"}}>
         <Icon name="doc" size={15} style={{color:"var(--red)"}}/>
         <span style={{fontSize:12.5,fontWeight:600}}>{b.title}</span>
-        <Badge tone="red" style={{marginLeft:"auto"}}>source PDF</Badge>
+        <Badge tone="red" style={{marginLeft:"auto"}}>Source document</Badge>
       </div>
       <div style={{padding:"14px",background:"#e9edf3"}}>
         <div style={{background:"#fff",border:"1px solid var(--border-2)",borderRadius:4,boxShadow:"var(--sh-2)",
@@ -245,11 +362,12 @@ function PdfBlock({ b }){
             ))}
           </div>
         </div>
-        <div style={{textAlign:"center",fontSize:11,color:"var(--muted)",marginTop:10}}>↑ exact table row highlighted at the cited page coordinates</div>
+        <div style={{textAlign:"center",fontSize:11,color:"var(--muted)",marginTop:10}}>Exact table row highlighted at the cited page position</div>
       </div>
     </Card>
   );
 }
+
 function CanonicalBlock({ b }){
   return (
     <Card pad={15} style={{margin:"8px 0"}}>
@@ -266,6 +384,7 @@ function CanonicalBlock({ b }){
     </Card>
   );
 }
+
 function RefusalBlock({ b }){
   const tone = b.tone==="red"?{bd:"var(--red)",bg:"var(--red-50)",ic:"var(--red)"}:{bd:"var(--amber)",bg:"var(--amber-50)",ic:"var(--amber)"};
   return (
@@ -289,6 +408,7 @@ function RefusalBlock({ b }){
     </div>
   );
 }
+
 function ClarifyBlock({ b, onGenerate }){
   const [sel,setSel]=useState({});
   const pick=(g,c)=>setSel(s=>({...s,[g]:c}));
@@ -326,12 +446,13 @@ function ClarifyBlock({ b, onGenerate }){
     </div>
   );
 }
+
 function TraceBlock({ b }){
   return (
     <Card pad={15} style={{margin:"8px 0"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
         <Icon name="branch" size={15} style={{color:"var(--blue)"}}/><span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
-        <Badge tone="green" style={{marginLeft:"auto"}}>reproducible</Badge>
+        <Badge tone="green" style={{marginLeft:"auto"}}>Reproducible</Badge>
       </div>
       <div style={{display:"flex",alignItems:"stretch",gap:0,flexWrap:"wrap"}}>
         {b.steps.map((s,i)=>(
@@ -352,7 +473,7 @@ function TraceBlock({ b }){
     </Card>
   );
 }
-/* ---------- causal: recursive driver decomposition (RFP §3.1.5 g) ---------- */
+
 function DriversBlock({ b, onCite }){
   const max=Math.max(...b.drivers.map(d=>Math.abs(d.v)));
   return (
@@ -382,7 +503,7 @@ function DriversBlock({ b, onCite }){
     </Card>
   );
 }
-/* ---------- causal → recommendations ---------- */
+
 function RecommendBlock({ b }){
   const TONE={High:["var(--red-50)","var(--red)"],Medium:["var(--amber-50)","var(--amber)"],Low:["var(--green-50)","var(--green)"]};
   return (
@@ -390,7 +511,7 @@ function RecommendBlock({ b }){
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
         <Icon name="target" size={15} style={{color:"var(--saffron)"}}/>
         <span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
-        <Badge tone="amber" style={{marginLeft:"auto"}}>model recommendation</Badge>
+        <Badge tone="amber" style={{marginLeft:"auto"}}>Model recommendation</Badge>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:9}}>
         {b.items.map((r,i)=>{
@@ -411,15 +532,15 @@ function RecommendBlock({ b }){
     </Card>
   );
 }
-/* ---------- complex-query capability badge (RFP §3.3.3) ---------- */
+
 function ComplexityBlock({ b }){
   const active=b.active||[];
   return (
     <div style={{margin:"8px 0",border:"1px solid var(--border)",borderRadius:"var(--r)",background:"var(--surface-2)",padding:"11px 13px"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
         <Icon name="layers" size={14} style={{color:"var(--saffron)"}}/>
-        <span style={{fontSize:12,fontWeight:700,color:"var(--ink)"}}>Complex query</span>
-        <span style={{fontSize:11.5,color:"var(--muted)"}}>· {active.length} / 5 capabilities engaged (≥3 required)</span>
+        <span style={{fontSize:12,fontWeight:700,color:"var(--ink)"}}>Query complexity</span>
+        <span style={{fontSize:11.5,color:"var(--muted)"}}>· {active.length} of 5 capabilities engaged</span>
       </div>
       <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
         {COMPLEX_FEATURES.map(f=>{
@@ -434,8 +555,9 @@ function ComplexityBlock({ b }){
     </div>
   );
 }
+
 function LogsBlock(){
-  const streams=[["ETL & Pipeline","etl","var(--green)"],["User Activity","user","var(--blue)"],["Inference","inf","var(--saffron)"]];
+  const streams=[["Pipeline logs","etl","var(--green)"],["User activity","user","var(--blue)"],["Inference log","inf","var(--saffron)"]];
   return (
     <div style={{margin:"8px 0",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10}}>
       {streams.map(([title,key,col])=>(
@@ -452,11 +574,11 @@ function LogsBlock(){
   );
 }
 
-function Block({ b, hl, onCite, onGenerate }){
+function Block({ b, hl, onCite, onGenerate, onPin, onOpenPDF }){
   switch(b.type){
     case "answer": return <AnswerBlock b={b} onCite={onCite}/>;
     case "text": return <RichText md={b.md} onCite={onCite}/>;
-    case "cites": return <CitesBlock b={b} hl={hl} onCite={onCite}/>;
+    case "cites": return <CitesBlock b={b} hl={hl} onCite={onCite} onOpenPDF={onOpenPDF}/>;
     case "sandbox": return <SandboxBlock b={b}/>;
     case "chart": return <ChartBlock b={b}/>;
     case "compare": return <CompareBlock b={b} onCite={onCite}/>;
@@ -476,5 +598,5 @@ function Block({ b, hl, onCite, onGenerate }){
 }
 
 Object.assign(window, {
-  AgentAvatar, RoutePills, ThinkTrace, RichText, Block,
+  AgentAvatar, RoutePills, ThinkTrace, RichText, Block, isDocSource,
 });
