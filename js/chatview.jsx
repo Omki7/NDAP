@@ -298,7 +298,7 @@ function AssistantMessage({data,onDone,onGenerate,onPin,onOpenPDF}){
           </div>
         )}
         <ThinkTrace think={think} n={thinkN} done={done}/>
-        {done&&showFusion&&<DataFusionPanel structured={["Structured Database (SQL/DuckDB)",...allCites.filter(c=>!c.url?.includes("rchiips")).slice(0,2).map(c=>c.src)].slice(0,3)} unstructured={[...new Set(pdfCites.map(c=>c.src))].slice(0,3)}/>}
+        {done&&showFusion&&<DataFusionPanel structured={["Structured Database (SQL/DuckDB)",...allCites.filter(c=>!isDocSource(c)).slice(0,2).map(c=>c.src)].slice(0,3)} unstructured={[...new Set(pdfCites.map(c=>c.src))].slice(0,3)}/>}
         {done&&(
           <div>
             {blocks.map((b,i)=><Block key={i} b={b} hl={hl} onCite={n=>setHl(n)} onGenerate={onGenerate} onPin={onPin} onOpenPDF={onOpenPDF}/>)}
@@ -352,7 +352,7 @@ function matchCat(text){
 
 const CAT_COLORS={A:"var(--blue)",B:"var(--saffron)",C:"var(--green)",D:"var(--navy-700)",E:"var(--red)",F:"var(--green)",G:"var(--blue)",H:"var(--amber)",I:"var(--navy-700)",J:"var(--red)",K:"var(--blue)"};
 function CatCard({cat,onClick}){
-  const fused=["K","B","E"].includes(cat.letter);
+  const fused=["K","B","E","D"].includes(cat.letter);
   return (
     <Card hover pad={13} onClick={onClick} style={{display:"flex",flexDirection:"column",gap:6,height:"100%",cursor:"pointer"}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>

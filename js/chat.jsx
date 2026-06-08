@@ -299,6 +299,8 @@ function CompareBlock({ b, onCite }){
 }
 
 function TableBlock({ b, onCite }){
+  const colTypes = b.colTypes||[];
+  const hasColTypes = colTypes.some(Boolean);
   return (
     <Card pad={0} style={{margin:"8px 0",overflow:"hidden"}}>
       <div style={{padding:"11px 15px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:8}}>
@@ -306,16 +308,44 @@ function TableBlock({ b, onCite }){
         <span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
         {b.cites&&b.cites.map(n=><sup key={n} onClick={()=>onCite&&onCite(n)} style={{color:"var(--blue)",cursor:"pointer",fontWeight:700}}>{n}</sup>)}
       </div>
+      {hasColTypes&&(
+        <div style={{padding:"5px 15px",background:"var(--surface-2)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+          <span style={{fontSize:10,color:"var(--muted)",fontWeight:600,flexShrink:0}}>Column source:</span>
+          <span style={{display:"flex",alignItems:"center",gap:5}}>
+            <span style={{width:8,height:8,borderRadius:2,background:"var(--blue)",display:"inline-block",flexShrink:0}}/>
+            <span style={{fontSize:10.5,color:"var(--blue-700)",fontWeight:600}}>Structured database</span>
+          </span>
+          <span style={{display:"flex",alignItems:"center",gap:5}}>
+            <span style={{width:8,height:8,borderRadius:2,background:"#c0392b",display:"inline-block",flexShrink:0}}/>
+            <span style={{fontSize:10.5,color:"#c0392b",fontWeight:600}}>PDF document</span>
+          </span>
+        </div>
+      )}
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-          <thead><tr>{b.cols.map((c,i)=><th key={i} style={{textAlign:"left",padding:"9px 15px",
-            background:"var(--surface-2)",color:"var(--muted)",fontWeight:600,fontSize:11.5,textTransform:"uppercase",
-            letterSpacing:.4,borderBottom:"1px solid var(--border)",whiteSpace:"nowrap"}}>{c}</th>)}</tr></thead>
+          <thead><tr>{b.cols.map((c,i)=>{
+            const ct=colTypes[i];
+            return (
+              <th key={i} style={{textAlign:"left",padding:"9px 15px",
+                background:ct==="structured"?"rgba(46,92,246,.06)":ct==="document"?"rgba(192,57,43,.06)":"var(--surface-2)",
+                color:"var(--muted)",fontWeight:600,fontSize:11.5,textTransform:"uppercase",
+                letterSpacing:.4,borderBottom:"1px solid var(--border)",whiteSpace:"nowrap"}}>
+                <div style={{display:"flex",alignItems:"center",gap:5}}>
+                  {ct&&<span style={{width:6,height:6,borderRadius:1,background:ct==="structured"?"var(--blue)":"#c0392b",flexShrink:0,display:"inline-block"}}/>}
+                  {c}
+                </div>
+              </th>
+            );
+          })}</tr></thead>
           <tbody>{b.rows.map((r,ri)=>(
             <tr key={ri} style={{borderBottom:"1px solid var(--surface-3)"}}>
-              {r.map((cell,ci)=><td key={ci} className={ci>1&&ci<4?"tnum":""} style={{padding:"9px 15px",
-                color:ci===0?"var(--ink)":"var(--ink-2)",fontWeight:ci===0?600:400,
-                ...(ci===4?{color:"var(--saffron)",fontWeight:600,whiteSpace:"nowrap"}:{})}}>{cell}</td>)}
+              {r.map((cell,ci)=>{
+                const ct=colTypes[ci];
+                return <td key={ci} className={ci>1&&ci<4?"tnum":""} style={{padding:"9px 15px",
+                  color:ci===0?"var(--ink)":"var(--ink-2)",fontWeight:ci===0?600:400,
+                  background:ct==="structured"?"rgba(46,92,246,.025)":ct==="document"?"rgba(192,57,43,.025)":"transparent",
+                  ...(ci===4?{color:"var(--saffron)",fontWeight:600,whiteSpace:"nowrap"}:{})}}>{cell}</td>;
+              })}
             </tr>
           ))}</tbody>
         </table>
@@ -326,16 +356,57 @@ function TableBlock({ b, onCite }){
 }
 
 function JoinReportBlock({ b }){
+  const hasTypes = b.leftType && b.rightType;
   return (
     <Card pad={15} style={{margin:"8px 0",borderLeft:"3px solid var(--saffron)"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
         <Icon name="layers" size={15} style={{color:"var(--saffron)"}}/>
         <span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
       </div>
-      <div className="mono" style={{fontSize:11.5,color:"var(--muted)",marginBottom:10,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-        <Badge tone="navy">{b.left}</Badge><span style={{color:"var(--saffron)",fontWeight:700}}>⋈</span>
-        <Badge tone="navy">{b.right}</Badge><span>on</span><Badge tone="saffron">{b.on}</Badge>
-      </div>
+
+      {hasTypes ? (
+        /* ── two-panel source diagram ── */
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:8,alignItems:"stretch",marginBottom:12}}>
+          {/* Left: Structured DB */}
+          <div style={{background:"var(--blue-50)",border:"1px solid var(--blue-100)",borderRadius:"var(--r)",padding:"10px 13px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:6}}>
+              <div style={{width:18,height:18,borderRadius:4,background:"var(--blue)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <Icon name="data" size={10} style={{color:"#fff"}}/>
+              </div>
+              <span style={{fontSize:9.5,fontWeight:700,color:"var(--blue-700)",textTransform:"uppercase",letterSpacing:.5}}>Structured Database</span>
+            </div>
+            <div style={{fontSize:12.5,fontWeight:700,color:"var(--ink)",marginBottom:2}}>{b.leftSrc}</div>
+            <div className="mono" style={{fontSize:10,color:"var(--muted)",marginBottom:4}}>{b.left}</div>
+            {b.leftDesc && <div style={{fontSize:10.5,color:"var(--muted-2)",lineHeight:1.4}}>{b.leftDesc}</div>}
+          </div>
+
+          {/* Join symbol */}
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,padding:"0 4px"}}>
+            <span style={{fontSize:22,color:"var(--saffron)",fontWeight:700,lineHeight:1}}>⋈</span>
+            <div style={{fontSize:8.5,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5,textAlign:"center",lineHeight:1.3}}>joined<br/>on</div>
+            <Badge tone="saffron">{b.on}</Badge>
+          </div>
+
+          {/* Right: PDF Document */}
+          <div style={{background:"var(--red-50)",border:"1px solid #e8c0bc",borderRadius:"var(--r)",padding:"10px 13px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:6}}>
+              <div style={{width:18,height:18,borderRadius:4,background:"#c0392b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <Icon name="doc" size={10} style={{color:"#fff"}}/>
+              </div>
+              <span style={{fontSize:9.5,fontWeight:700,color:"#c0392b",textTransform:"uppercase",letterSpacing:.5}}>PDF Document</span>
+            </div>
+            <div style={{fontSize:12.5,fontWeight:700,color:"var(--ink)",marginBottom:2}}>{b.rightSrc}</div>
+            <div className="mono" style={{fontSize:10,color:"var(--muted)",marginBottom:4}}>{b.right}</div>
+            {b.rightDesc && <div style={{fontSize:10.5,color:"var(--muted-2)",lineHeight:1.4}}>{b.rightDesc}</div>}
+          </div>
+        </div>
+      ) : (
+        <div className="mono" style={{fontSize:11.5,color:"var(--muted)",marginBottom:10,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <Badge tone="navy">{b.left}</Badge><span style={{color:"var(--saffron)",fontWeight:700}}>⋈</span>
+          <Badge tone="navy">{b.right}</Badge><span>on</span><Badge tone="saffron">{b.on}</Badge>
+        </div>
+      )}
+
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px 18px"}}>
         {b.rows.map((r,i)=>(
           <div key={i} style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:12.5,
