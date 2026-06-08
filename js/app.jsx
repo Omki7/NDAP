@@ -5,13 +5,12 @@
 const NAV=[
   { id:"home", icon:"home", key:"nav_home" },
   { id:"ask", icon:"ask", key:"nav_ask" },
-  { id:"data", icon:"data", key:"nav_data" },
   { id:"analytics", icon:"analytics", key:"nav_analytics" },
   { id:"studio", icon:"studio", key:"nav_studio" },
 ];
 const ROUTE_TITLE={
   home:{en:"Home",hi:"मुख पृष्ठ"}, ask:{en:"Ask NDAP",hi:"NDAP से पूछें"},
-  data:{en:"Datasets & MDM",hi:"डेटासेट और MDM"}, studio:{en:"AI Studio",hi:"AI स्टूडियो"},
+  studio:{en:"AI Studio",hi:"AI स्टूडियो"},
   analytics:{en:"Visualizations & Analytics",hi:"विज़ुअलाइज़ेशन और विश्लेषण"},
 };
 
@@ -194,7 +193,6 @@ function App(){
         <main id="main" style={{flex:1,minHeight:0,background:"var(--app-bg)"}}>
           {route==="home" && <HomeView go={go} lang={lang}/>}
           {route==="ask" && <ChatView lang={lang}/>}
-          {route==="data" && <DataView/>}
           {route==="analytics" && <VisualizationsView lang={lang}/>}
           {route==="studio" && <StudioView/>}
         </main>

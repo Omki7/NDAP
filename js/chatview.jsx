@@ -8,18 +8,21 @@ function DataFusionPanel({structured,unstructured}){
     <div style={{margin:"10px 0 6px",border:"1px solid var(--border)",borderRadius:"var(--r)",overflow:"hidden"}}>
       <div style={{padding:"8px 12px",background:"var(--surface-2)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:6}}>
         <Icon name="layers" size={12} style={{color:"var(--navy-800)"}}/>
-        <span style={{fontSize:11,fontWeight:700,color:"var(--ink)",textTransform:"uppercase",letterSpacing:.5}}>Data sources used in this response</span>
+        <span style={{fontSize:11,fontWeight:700,color:"var(--ink)",textTransform:"uppercase",letterSpacing:.5}}>Where this answer comes from</span>
         <span style={{marginLeft:"auto",fontSize:10.5,color:"var(--green)",fontWeight:600,display:"flex",alignItems:"center",gap:3}}>
-          <Icon name="check" size={10}/>All verified
+          <Icon name="shield" size={10}/>All sources verified
         </span>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr"}}>
         <div style={{padding:"10px 13px",borderRight:"1px solid var(--border)"}}>
           <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:7}}>
-            <div style={{width:18,height:18,borderRadius:4,background:"var(--blue)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <Icon name="data" size={10} style={{color:"#fff"}}/>
+            <div style={{width:20,height:20,borderRadius:5,background:"var(--blue)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Icon name="data" size={11} style={{color:"#fff"}}/>
             </div>
-            <span style={{fontSize:10.5,fontWeight:700,color:"var(--blue-700)",textTransform:"uppercase",letterSpacing:.4}}>Structured databases</span>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--blue-700)",letterSpacing:.3}}>Government Databases</div>
+              <div style={{fontSize:9.5,color:"var(--muted)",marginTop:1}}>Structured data — queried from official databases</div>
+            </div>
           </div>
           {structured.slice(0,3).map((s,i)=>(
             <div key={i} style={{fontSize:12,color:"var(--ink-2)",marginTop:3,display:"flex",alignItems:"flex-start",gap:5,lineHeight:1.35}}>
@@ -27,15 +30,18 @@ function DataFusionPanel({structured,unstructured}){
             </div>
           ))}
           <div style={{fontSize:10.5,color:"var(--muted)",marginTop:8,display:"flex",alignItems:"center",gap:3,borderTop:"1px solid var(--border)",paddingTop:7}}>
-            <Icon name="lock" size={10}/>No external links
+            <Icon name="lock" size={10}/>India-only data residency
           </div>
         </div>
         <div style={{padding:"10px 13px"}}>
           <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:7}}>
-            <div style={{width:18,height:18,borderRadius:4,background:"#c0392b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <Icon name="doc" size={10} style={{color:"#fff"}}/>
+            <div style={{width:20,height:20,borderRadius:5,background:"#c0392b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Icon name="doc" size={11} style={{color:"#fff"}}/>
             </div>
-            <span style={{fontSize:10.5,fontWeight:700,color:"#c0392b",textTransform:"uppercase",letterSpacing:.4}}>Source documents</span>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"#c0392b",letterSpacing:.3}}>Government Documents</div>
+              <div style={{fontSize:9.5,color:"var(--muted)",marginTop:1}}>Reports &amp; PDFs — searched from indexed documents</div>
+            </div>
           </div>
           {unstructured.slice(0,3).map((s,i)=>(
             <div key={i} style={{fontSize:12,color:"var(--ink-2)",marginTop:3,display:"flex",alignItems:"flex-start",gap:5,lineHeight:1.35}}>
@@ -43,7 +49,7 @@ function DataFusionPanel({structured,unstructured}){
             </div>
           ))}
           <div style={{fontSize:10.5,color:"var(--muted)",marginTop:8,display:"flex",alignItems:"center",gap:3,borderTop:"1px solid var(--border)",paddingTop:7}}>
-            <Icon name="ask" size={10}/>Full-text indexed · question-and-answer capable
+            <Icon name="ask" size={10}/>Click any document citation to open and ask questions
           </div>
         </div>
       </div>
@@ -110,7 +116,7 @@ function PDFModal({cite,onClose}){
               <p style={{fontSize:13,lineHeight:1.8,color:"#333",marginBottom:16}}>The National Data and Analytics Platform (NDAP) has indexed, verified, and made this source fully searchable under the National Data Sharing and Accessibility Policy (NDSAP).</p>
               <div style={{marginTop:28,padding:"10px 13px",background:"var(--surface-2)",borderRadius:5,fontSize:10.5,color:"var(--muted)",display:"flex",alignItems:"center",gap:6}}>
                 <Icon name="shield" size={13} style={{color:"var(--green)",flexShrink:0}}/>
-                <span className="mono">NDAP Checksum: {cite.checksum||"sha256:5e2c...91aa"} · Verified 2025-11-14</span>
+                <span>NDAP verified source · indexed and searchable</span>
               </div>
             </div>
           </div>
@@ -258,7 +264,6 @@ function AssistantMessage({data,onDone,onGenerate,onPin,onOpenPDF}){
   const [routeN,setRouteN]=useState(0);
   const [thinkN,setThinkN]=useState(0);
   const [hl,setHl]=useState(null);
-  const [chartType,setChartType]=useState(null);
   const doneRef=useRef(false);
 
   useEffect(()=>{
@@ -282,7 +287,7 @@ function AssistantMessage({data,onDone,onGenerate,onPin,onOpenPDF}){
       <AgentAvatar/>
       <div style={{flex:1,minWidth:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:7,flexWrap:"wrap"}}>
-          <span style={{fontSize:13,fontWeight:700,color:"var(--navy-800)"}}>NDAP Reasoning Engine</span>
+          <span style={{fontSize:13,fontWeight:700,color:"var(--navy-800)"}}>NDAP Assistant</span>
           <Badge tone="saffron">{data.agent}</Badge>
         </div>
         <RoutePills route={route} n={routeN}/>
@@ -296,26 +301,7 @@ function AssistantMessage({data,onDone,onGenerate,onPin,onOpenPDF}){
         {done&&showFusion&&<DataFusionPanel structured={["Structured Database (SQL/DuckDB)",...allCites.filter(c=>!c.url?.includes("rchiips")).slice(0,2).map(c=>c.src)].slice(0,3)} unstructured={[...new Set(pdfCites.map(c=>c.src))].slice(0,3)}/>}
         {done&&(
           <div>
-            {hasChart&&(
-              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,flexWrap:"wrap"}}>
-                <span style={{fontSize:10,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Chart type:</span>
-                {["bar","line","area"].map(t=>(
-                  <button key={t} onClick={()=>setChartType(chartType===t?null:t)} style={{padding:"3px 10px",fontSize:11,fontWeight:600,border:"1px solid",borderRadius:20,cursor:"pointer",transition:"all .15s",
-                    borderColor:(chartType||"bar")===t?"var(--blue)":"var(--border)",background:(chartType||"bar")===t?"var(--blue-50)":"transparent",color:(chartType||"bar")===t?"var(--blue-700)":"var(--muted)"}}>{t}</button>
-                ))}
-              </div>
-            )}
-            {blocks.map((b,i)=>{const bm=b.type==="chart"&&chartType?{...b,chart:chartType}:b;return <Block key={i} b={bm} hl={hl} onCite={n=>setHl(n)} onGenerate={onGenerate} onPin={onPin}/>;})}
-            {pdfCites.length>0&&onOpenPDF&&(
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
-                {pdfCites.map((c,i)=>(
-                  <button key={i} onClick={()=>onOpenPDF(c)} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,color:"#c0392b",background:"#fff",border:"1px solid #e8c0bc",borderRadius:20,padding:"4px 10px",cursor:"pointer",transition:"all .15s"}}
-                    onMouseEnter={e=>e.currentTarget.style.background="#fff5f4"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-                    <Icon name="doc" size={11}/>View PDF — {c.src.split(" ").slice(0,4).join(" ")}
-                  </button>
-                ))}
-              </div>
-            )}
+            {blocks.map((b,i)=><Block key={i} b={b} hl={hl} onCite={n=>setHl(n)} onGenerate={onGenerate} onPin={onPin} onOpenPDF={onOpenPDF}/>)}
             <div style={{display:"flex",alignItems:"center",gap:12,marginTop:9,paddingTop:8,borderTop:"1px solid var(--border)",flexWrap:"wrap"}}>
               <span style={{fontSize:11,color:"var(--muted)"}}>{data.latency}</span>
               <span style={{marginLeft:"auto",display:"flex",gap:6}}>
@@ -354,7 +340,7 @@ function clarifyAnswer(sel){
   return{agent:"Retrieval Agent",route:["Intent Router","Retrieval Agent","Visualisation Agent"],id:"clr1",latency:"1.04 s",cost:"Rs0.07",think:["Parameters specified","Retrieving "+ds+" * "+geo+" * "+yr],blocks:[
     {type:"answer",label:"Unemployment rate - "+geo+" * "+ds+" * "+yr+" * "+co,value:"3.2%",unit:"usual status (ps+ss)",cites:[1]},
     {type:"text",md:"With your parameters, the unemployment rate is **3.2%**.[1]"},
-    {type:"cites",items:[{n:1,src:"PLFS Annual Report 2023-24",loc:"Statement 14 * "+geo,snippet:"Unemployment rate (usual status, ps+ss): 3.2%.",url:"mospi.gov.in/plfs/2024",checksum:"sha256:5e2c...91aa"}]},
+    {type:"cites",items:[{n:1,src:"PLFS Annual Report 2023-24",loc:"Statement 14 * "+geo,snippet:"Unemployment rate (usual status, ps+ss): 3.2%.",url:"mospi.gov.in/plfs/2024"}]},
   ]};
 }
 function matchCat(text){
@@ -372,10 +358,10 @@ function CatCard({cat,onClick}){
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <span style={{width:24,height:24,borderRadius:6,background:CAT_COLORS[cat.letter],color:"#fff",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{cat.letter}</span>
         <span style={{fontSize:13,fontWeight:600,color:"var(--ink)",flex:1}}>{cat.name}</span>
-        {fused&&<span style={{fontSize:9.5,fontWeight:600,background:"var(--surface-3)",border:"1px solid var(--border)",borderRadius:9,padding:"2px 8px",color:"var(--muted)",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Icon name="layers" size={9}/>Combined</span>}
+
       </div>
       <div style={{fontSize:11.5,color:"var(--muted)",lineHeight:1.4}}>{cat.purpose}</div>
-      {fused&&<div style={{fontSize:11,color:"var(--blue-700)",background:"var(--blue-50)",borderRadius:4,padding:"3px 7px",display:"flex",alignItems:"center",gap:4}}><Icon name="layers" size={11}/>Merges structured + unstructured data</div>}
+      {fused&&<div style={{fontSize:10.5,color:"var(--blue-700)",background:"var(--blue-50)",borderRadius:4,padding:"3px 7px",display:"flex",alignItems:"center",gap:4}}><Icon name="layers" size={11}/>Uses databases + government documents</div>}
       <div style={{marginTop:"auto",paddingTop:7,borderTop:"1px dashed var(--border-2)",fontSize:11,color:"var(--ink-2)",fontStyle:"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
         {cat.voice?cat.queryRoman:`"${cat.query||(cat.turns&&cat.turns[0]?.query)||""}"`}
       </div>
@@ -462,6 +448,15 @@ function ChatView({lang}){
     else pushCatTurn(cat,cat.multiturn?0:null);
   }
   function onAssistantDone(item){const cat=CATS.find(c=>c.id===item.catId);if(cat&&cat.multiturn&&item.ti!=null&&item.ti<cat.turns.length-1) setFollowup({catId:cat.id,ti:item.ti+1});}
+
+  // Listen for prefill events from GIS map
+  useEffect(()=>{
+    function handlePrefill(evt){
+      setInput(evt.detail);
+    }
+    window.addEventListener('ndap-prefill',handlePrefill);
+    return ()=>window.removeEventListener('ndap-prefill',handlePrefill);
+  },[]);
   function submitInput(){
     const text=input.trim();if(!text) return;setInput("");
     const idx=matchCat(text);
@@ -536,9 +531,9 @@ function ChatView({lang}){
                   </div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:8,margin:"22px 0 12px"}}>
-                  <span style={{fontSize:11,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--saffron)"}}>Query Categories</span>
+                  <span style={{fontSize:11,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--saffron)"}}>Example Questions</span>
                   <span style={{flex:1,height:1,background:"var(--border)"}}/>
-                  <span style={{fontSize:10.5,color:"var(--muted)",display:"flex",alignItems:"center",gap:4}}><Icon name="layers" size={11} style={{color:"var(--saffron)"}}/><span>Combined = structured databases + source documents</span></span>
+                  <span style={{fontSize:10.5,color:"var(--muted)",display:"flex",alignItems:"center",gap:4}}><Icon name="layers" size={11} style={{color:"var(--saffron)"}}/><span>Some questions combine databases + government documents</span></span>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:11}}>
                   {CATS.map(c=><CatCard key={c.id} cat={c} onClick={()=>launchCat(c)}/>)}
@@ -583,7 +578,7 @@ function ChatView({lang}){
               <button onClick={()=>launchCat(CATS[5])} title="Voice" style={{width:34,height:34,borderRadius:7,border:"none",background:listening?"var(--blue)":"var(--surface-3)",color:listening?"#fff":"var(--muted)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Icon name="mic" size={16}/></button>
               <button onClick={submitInput} style={{width:34,height:34,borderRadius:7,border:"none",background:"var(--blue)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Icon name="send" size={16}/></button>
             </div>
-            <div style={{fontSize:10.5,color:"var(--muted-2)",marginTop:6,textAlign:"center"}}>Sandboxed demo · 10 evaluation datasets · all answers cited</div>
+            
           </div>
         </div>
       </div>

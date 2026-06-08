@@ -115,25 +115,25 @@ const COMPLEX_FEATURES = [
 /* triple-stream logs */
 const LOG_STREAMS = {
   etl:[
-    "[ETL] census-2011.village → LGD remap: 6,40,930 rows, 0 dropped",
-    "[ETL] mgnrega.fy2024 → unit normalise ₹ lakh→₹, ok",
-    "[ETL] schema-check nfhs5.district: 707/707 cols typed",
-    "[ETL] checksum verify pmkisan.ledger sha256:9af3… OK",
-    "[ETL] iceberg compaction: 142 files → 11, 3.2 GB reclaimed",
+    "Census 2011 village data → remapped to standard codes: 6,40,930 rows, 0 dropped",
+    "MGNREGA FY2024 → currency units standardised, OK",
+    "NFHS-5 district data: all 707 columns verified",
+    "PM-KISAN beneficiary ledger — data integrity verified OK",
+    "Data storage optimised: 142 files consolidated to 11, 3.2 GB reclaimed",
   ],
   user:[
-    "[USR] u/anaya.sharma viewed dataset census-2011",
-    "[USR] u/r.menon download udise+_enrolment.csv (4.2 MB)",
-    "[USR] u/policy.cell exported brief 'Rural-Health-2026.docx'",
-    "[USR] u/guest ran query Q-A · geography=Kerala",
-    "[USR] u/j.singh pinned artifact chart#viz-7741 to draft",
+    "Anaya Sharma viewed dataset: Census 2011",
+    "R. Menon downloaded UDISE+ Enrolment data (4.2 MB)",
+    "Policy Cell exported brief: Rural-Health-2026.docx",
+    "Guest user ran query — Geography: Kerala",
+    "J. Singh pinned a chart to their draft document",
   ],
   inf:[
-    "[INF] q=2c91 route=Retrieval conf=0.97 latency=812ms",
-    "[INF] q=2c91 matched rows=1 source=census-2011.p1834",
-    "[INF] q=4f02 codegen python 23 lines · sandbox=gVisor exit=0",
-    "[INF] q=4f02 cost ₹0.214 tokens_in=2,140 tokens_out=688",
-    "[INF] guardrail trip q=9a7d type=prompt_injection action=refuse",
+    "Query processed → Data Search, confidence 97%, response time 812ms",
+    "Found 1 matching row in Census 2011 dataset",
+    "Analysis ran 23 lines of code in secure environment, completed OK",
+    "Processing cost: ₹0.214",
+    "Security check: blocked 1 unsafe request (prompt injection)",
   ],
 };
 

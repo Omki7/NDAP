@@ -43,9 +43,11 @@ function ThinkTrace({ think, n, done }){
       <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,
         padding:"8px 12px",background:"none",border:"none",color:"var(--muted)",fontSize:12,fontWeight:600,cursor:"pointer"}}>
         <Icon name="bolt" size={14} style={{color:"var(--saffron)"}}/>
-        <span>Analysis trace</span>
+        <span>How this answer was found</span>
         <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+          {!done && <span style={{fontSize:11,color:"var(--saffron)"}}>Working…</span>}
           {!done && <Dot color="var(--saffron)" pulse/>}
+          {done && <span style={{fontSize:11,color:"var(--green)",fontWeight:600}}>Complete</span>}
           <Icon name={open?"chevD":"chevR"} size={13}/>
         </span>
       </button>
@@ -173,31 +175,31 @@ function CitesBlock({ b, hl, onCite, onOpenPDF }){
             <div style={{padding:"6px 12px 9px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
               {isDoc?(
                 <>
-                  {/* Document: show link + Ask this document */}
+                  {/* Document: show source link + Ask this document */}
                   <span style={{fontSize:10.5,color:"var(--muted)",display:"flex",alignItems:"center",gap:4,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                     <Icon name="link" size={11} style={{flexShrink:0}}/>{c.url}
                   </span>
                   {onOpenPDF&&<button onClick={()=>onOpenPDF(c)} style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,color:"#c0392b",background:"#fff",border:"1px solid #e8c0bc",borderRadius:20,padding:"3px 9px",cursor:"pointer",flexShrink:0,transition:"background .12s"}}
                     onMouseEnter={e=>e.currentTarget.style.background="#fff5f4"}
                     onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-                    <Icon name="ask" size={10}/>Ask this document
+                    <Icon name="ask" size={10}/>Open &amp; ask questions
                   </button>}
+                  <span style={{fontSize:10.5,color:"var(--green)",fontWeight:600,display:"flex",alignItems:"center",gap:3}}>
+                    <Icon name="shield" size={11}/>Verified source
+                  </span>
                 </>
               ):(
                 <>
-                  {/* Structured: show checksum only, no link */}
-                  <span style={{fontSize:10.5,color:"var(--muted-2)",display:"flex",alignItems:"center",gap:4}}>
-                    <Icon name="shield" size={11} style={{color:"var(--green)",flexShrink:0}}/>
-                    <span className="mono">{c.checksum}</span>
+                  {/* Structured: verified badge, no technical hashes */}
+                  <span style={{fontSize:10.5,color:"var(--green)",fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+                    <Icon name="shield" size={11} style={{flexShrink:0}}/>
+                    Verified source
                   </span>
                   <span style={{marginLeft:"auto",fontSize:10.5,fontWeight:600,color:"var(--muted)",display:"flex",alignItems:"center",gap:3}}>
-                    <Icon name="data" size={10}/>Database record · no external link
+                    <Icon name="data" size={10}/>Government database record
                   </span>
                 </>
               )}
-              {isDoc&&<span style={{fontSize:10.5,color:"var(--muted-2)",display:"flex",alignItems:"center",gap:3,marginLeft:"auto"}}>
-                <span className="mono">{c.checksum}</span>
-              </span>}
             </div>
           </div>
         );
@@ -208,52 +210,58 @@ function CitesBlock({ b, hl, onCite, onOpenPDF }){
 
 /* ---------- Sandbox / computation block ---------- */
 function SandboxBlock({ b }){
-  const [tab,setTab]=useState("code");
+  const [tab,setTab]=useState("output");
   return (
-    <div className="rise" style={{margin:"8px 0",borderRadius:"var(--r)",overflow:"hidden",border:"1px solid var(--navy-900)",boxShadow:"var(--sh-2)"}}>
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--navy-900)"}}>
-        <Icon name="code" size={15} style={{color:"var(--green)"}}/>
-        <span style={{fontSize:12,color:"#cdd8ec",fontWeight:600}}>{b.title}</span>
+    <div className="rise" style={{margin:"8px 0",borderRadius:"var(--r)",overflow:"hidden",border:"1px solid var(--border-2)",boxShadow:"var(--sh-1)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--surface-2)",borderBottom:"1px solid var(--border)"}}>
+        <Icon name="bolt" size={15} style={{color:"var(--green)"}}/>
+        <span style={{fontSize:12,color:"var(--ink)",fontWeight:600}}>Computation Details</span>
+        <span style={{fontSize:10.5,color:"var(--green)",fontWeight:600,display:"flex",alignItems:"center",gap:3,marginLeft:4}}><Icon name="shield" size={10}/>Ran in secure environment</span>
         <div style={{marginLeft:"auto",display:"flex",gap:4}}>
-          {["code","output"].map(tk=>(
+          {["output","code"].map(tk=>(
             <button key={tk} onClick={()=>setTab(tk)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:5,
-              border:"none",cursor:"pointer",textTransform:"capitalize",
-              background:tab===tk?"var(--navy-600)":"transparent",color:tab===tk?"#fff":"#7d8cab"}}>{tk}</button>
+              border:"1px solid",cursor:"pointer",textTransform:"capitalize",
+              borderColor:tab===tk?"var(--blue)":"var(--border)",
+              background:tab===tk?"var(--blue-50)":"transparent",color:tab===tk?"var(--blue-700)":"var(--muted)"}}>{tk==="code"?"View code":tk==="output"?"Result":"Output"}</button>
           ))}
         </div>
       </div>
-      <pre className="mono" style={{margin:0,padding:"13px 15px",background:"#0a1322",color: tab==="code"?"#d6e2f5":"#9fe8c4",
+      <pre className="mono" style={{margin:0,padding:"13px 15px",background:tab==="code"?"#0a1322":"var(--surface-inset)",color:tab==="code"?"#d6e2f5":"var(--ink)",
         fontSize:12,lineHeight:1.65,overflowX:"auto",whiteSpace:"pre"}}>
-        {tab==="code"? b.code : "$ python compute.py\n"+b.output}
+        {tab==="code"? b.code : ""+b.output}
       </pre>
-      <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px",background:"var(--navy-900)",fontSize:11,color:"#7d8cab"}}>
-        <Dot color="var(--green)"/><span>Exit 0 · Isolated execution environment · Network-restricted</span>
-      </div>
     </div>
   );
 }
 
 /* ---------- Chart block — owns its own type switcher ---------- */
 function ChartBlock({ b }){
-  const availableTypes = b.data ? ["bar","line","area"] : ["bar","line"];
+  const availableTypes = b.data ? ["bar","hbar","line","area","donut"] : ["bar","hbar","line"];
+  const typeLabels = {bar:"Bar",hbar:"Horizontal",line:"Line",area:"Area",donut:"Pie / Donut"};
   const [type,setType] = useState(b.chart || "bar");
   const lineData = b.data ? b.data.map(d=>d.v) : [];
+  const donutData = b.data ? b.data.map(d=>({k:d.k,v:d.v})) : [];
 
   return (
     <Card pad={15} style={{margin:"8px 0"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
         <Icon name="chart" size={15} style={{color:"var(--blue)"}}/>
         <span style={{fontSize:13,fontWeight:600,color:"var(--ink)",flex:1}}>{b.title}</span>
-        <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:3,flexShrink:0,flexWrap:"wrap"}}>
+          <span style={{fontSize:10,color:"var(--muted)",marginRight:4}}>Chart type:</span>
           {availableTypes.map(t=>(
             <button key={t} onClick={()=>setType(t)} style={{padding:"3px 9px",fontSize:11,fontWeight:600,border:"1px solid",borderRadius:20,cursor:"pointer",transition:"all .12s",
               borderColor:type===t?"var(--blue)":"var(--border)",
               background:type===t?"var(--blue-50)":"transparent",
-              color:type===t?"var(--blue-700)":"var(--muted)"}}>{t}</button>
+              color:type===t?"var(--blue-700)":"var(--muted)"}}>{typeLabels[t]||t}</button>
           ))}
         </div>
       </div>
-      {(type==="line"||type==="area")&&lineData.length>0?(
+      {type==="donut"&&donutData.length>0?(
+        <Donut data={donutData}/>
+      ):type==="hbar"&&b.data?(
+        <HBars data={b.data} fmt={b.fmt||(v=>String(v))}/>
+      ):(type==="line"||type==="area")&&lineData.length>0?(
         <><AreaLine data={lineData} color="var(--blue)" fill={type==="area"?"rgba(46,107,214,.12)":"rgba(0,0,0,0)"} showDots={type==="line"}/><div style={{fontSize:10.5,color:"var(--muted-2)",marginTop:6}}>{b.unit}</div></>
       ):(
         <BarChart data={b.data||[]} fmt={b.fmt||(v=>String(v))} unit={b.unit}/>
@@ -452,7 +460,7 @@ function TraceBlock({ b }){
     <Card pad={15} style={{margin:"8px 0"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
         <Icon name="branch" size={15} style={{color:"var(--blue)"}}/><span style={{fontSize:13,fontWeight:600}}>{b.title}</span>
-        <Badge tone="green" style={{marginLeft:"auto"}}>Reproducible</Badge>
+        <Badge tone="green" style={{marginLeft:"auto"}}>Fully reproducible</Badge>
       </div>
       <div style={{display:"flex",alignItems:"stretch",gap:0,flexWrap:"wrap"}}>
         {b.steps.map((s,i)=>(
@@ -464,7 +472,7 @@ function TraceBlock({ b }){
                 <span style={{fontSize:12.5,fontWeight:700,color:"var(--navy-800)"}}>{s.s}</span>
               </div>
               <div style={{fontSize:11.5,color:"var(--muted)",lineHeight:1.4,marginBottom:6}}>{s.d}</div>
-              <span className="mono" style={{fontSize:11,color:"var(--blue)",fontWeight:600}}>{s.ms} ms</span>
+              <span style={{fontSize:11,color:"var(--blue)",fontWeight:600}}>{(s.ms/1000).toFixed(1)}s</span>
             </div>
             {i<b.steps.length-1 && <div style={{display:"flex",alignItems:"center",padding:"0 4px"}}><Icon name="chevR" size={16} style={{color:"var(--border-strong)"}}/></div>}
           </React.Fragment>
@@ -557,7 +565,7 @@ function ComplexityBlock({ b }){
 }
 
 function LogsBlock(){
-  const streams=[["Pipeline logs","etl","var(--green)"],["User activity","user","var(--blue)"],["Inference log","inf","var(--saffron)"]];
+  const streams=[["Data Pipeline","etl","var(--green)"],["User Activity","user","var(--blue)"],["Analysis Log","inf","var(--saffron)"]];
   return (
     <div style={{margin:"8px 0",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10}}>
       {streams.map(([title,key,col])=>(

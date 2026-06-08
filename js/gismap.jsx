@@ -1,5 +1,6 @@
 /* ============================================================
-   NDAP — ENTERPRISE GIS  (Leaflet choropleth · district drill · Ask NDAP)
+   NDAP — ENTERPRISE GIS  (Leaflet choropleth · district GeoJSON drill)
+   v3 — Seamless polygon drillthrough: state → district choropleth
    ============================================================ */
 
 const GIS_LAYERS={
@@ -11,11 +12,11 @@ const GIS_LAYERS={
     description:"Overall literacy rate (persons aged 7+) by state — Primary Census Abstract, Table C-08.",
     fmt:v=>v.toFixed(1)+"%",min:55,max:96,lo:[218,232,250],hi:[11,37,82],
     values:{jk:67.2,hp:82.8,pb:75.8,hr:75.6,dl:86.2,uk:78.8,up:67.7,rj:66.1,br:61.8,jh:66.4,wb:76.3,as:72.2,ne:74.0,od:72.9,mp:69.3,cg:70.3,gj:78.0,mh:82.3,ts:66.5,ap:67.0,ka:75.4,ga:88.7,kl:94.0,tn:80.1}},
-  mgnrega:{label:"MGNREGA Coverage",icon:"users",source:"MGNREGA Management Information System, FY 2024",unit:"% rural households with job cards",
+  mgnrega:{label:"MGNREGA Coverage",icon:"users",source:"MGNREGA MIS, FY 2024",unit:"% rural households with job cards",
     description:"Rural households with active MGNREGA job cards as a percentage of total rural households.",
     fmt:v=>v.toFixed(1)+"%",min:20,max:95,lo:[252,242,218],hi:[148,78,12],
     values:{jk:52.1,hp:61.4,pb:38.2,hr:42.1,dl:28.4,uk:55.0,up:74.2,rj:82.1,br:88.4,jh:91.2,wb:76.8,as:78.3,ne:68.0,od:85.6,mp:80.1,cg:82.7,gj:48.3,mh:62.1,ts:71.4,ap:76.8,ka:58.2,ga:22.1,kl:45.3,tn:68.9}},
-  poverty:{label:"Multidimensional Poverty",icon:"warn",source:"NITI Aayog Multidimensional Poverty Index 2021",unit:"% multidimensionally poor",
+  poverty:{label:"Multidimensional Poverty",icon:"warn",source:"NITI Aayog MPI 2021",unit:"% multidimensionally poor",
     description:"Share of population that is multidimensionally poor, per NITI Aayog Multidimensional Poverty Index (score ≥ 0.333).",
     fmt:v=>v.toFixed(1)+"%",min:0,max:50,lo:[240,250,240],hi:[160,30,30],
     values:{jk:4.8,hp:4.9,pb:4.7,hr:6.0,dl:2.1,uk:11.0,up:22.9,rj:15.3,br:33.7,jh:28.8,wb:11.8,as:19.3,ne:16.0,od:15.6,mp:20.6,cg:16.3,gj:11.6,mh:7.7,ts:5.8,ap:6.0,ka:7.5,ga:0.8,kl:0.5,tn:2.2}},
@@ -29,36 +30,70 @@ const STATE_NAMES={jk:"J&K / Ladakh",hp:"Himachal Pradesh",pb:"Punjab",hr:"Harya
 
 const ST_MAP={"Andhra Pradesh":"ap","Arunachal Pradesh":"ne","Assam":"as","Bihar":"br","Chhattisgarh":"cg","Goa":"ga","Gujarat":"gj","Haryana":"hr","Himachal Pradesh":"hp","Jammu & Kashmir":"jk","Jammu and Kashmir":"jk","Jharkhand":"jh","Karnataka":"ka","Kerala":"kl","Madhya Pradesh":"mp","Maharashtra":"mh","Manipur":"ne","Meghalaya":"ne","Mizoram":"ne","Nagaland":"ne","Delhi":"dl","NCT of Delhi":"dl","Odisha":"od","Punjab":"pb","Rajasthan":"rj","Tamil Nadu":"tn","Telangana":"ts","Tripura":"ne","Uttar Pradesh":"up","Uttarakhand":"uk","West Bengal":"wb","Ladakh":"jk","Sikkim":null,"Andaman & Nicobar Island":null,"Lakshadweep":null,"Puducherry":null,"Chandigarh":null,"Daman and Diu":null,"Dadra and Nagar Haveli":null};
 
-/* ── District-level reference names ──────────────────────────── */
 const DISTRICT_NAMES={
-  jk:["Srinagar","Jammu","Anantnag","Baramulla","Kupwara","Leh"],
-  hp:["Shimla","Kangra","Mandi","Kullu","Solan","Bilaspur"],
-  pb:["Ludhiana","Amritsar","Jalandhar","Patiala","Bathinda","Hoshiarpur"],
-  hr:["Gurugram","Faridabad","Hisar","Ambala","Karnal","Rohtak"],
+  jk:["Srinagar","Jammu","Anantnag","Baramulla","Kupwara","Leh","Poonch","Kathua"],
+  hp:["Shimla","Kangra","Mandi","Kullu","Solan","Bilaspur","Hamirpur","Una"],
+  pb:["Ludhiana","Amritsar","Jalandhar","Patiala","Bathinda","Hoshiarpur","Gurdaspur","Sangrur"],
+  hr:["Gurugram","Faridabad","Hisar","Ambala","Karnal","Rohtak","Panipat","Sonipat"],
   dl:["Central Delhi","South Delhi","North Delhi","East Delhi","West Delhi","North-West Delhi"],
-  uk:["Dehradun","Haridwar","Nainital","Udham Singh Nagar","Pauri Garhwal","Tehri Garhwal"],
-  up:["Lucknow","Agra","Varanasi","Kanpur Nagar","Prayagraj","Meerut"],
-  rj:["Jaipur","Jodhpur","Kota","Ajmer","Bikaner","Udaipur"],
-  br:["Patna","Gaya","Muzaffarpur","Bhagalpur","Darbhanga","Nalanda"],
-  jh:["Ranchi","Dhanbad","Bokaro","Deoghar","Hazaribagh","East Singhbhum"],
-  wb:["Kolkata","Howrah","Bardhaman","Darjeeling","Murshidabad","Hooghly"],
-  as:["Kamrup Metro","Dibrugarh","Jorhat","Cachar","Sonitpur","Nagaon"],
-  ne:["East Imphal","Ri-Bhoi","Aizawl","Dimapur","East Khasi Hills","West Tripura"],
-  od:["Khordha","Cuttack","Sundargarh","Sambalpur","Ganjam","Puri"],
-  mp:["Bhopal","Indore","Jabalpur","Gwalior","Ujjain","Sagar"],
-  cg:["Raipur","Bilaspur","Durg","Korba","Rajnandgaon","Bastar"],
-  gj:["Ahmedabad","Surat","Vadodara","Rajkot","Bhavnagar","Jamnagar"],
-  mh:["Mumbai City","Pune","Nagpur","Thane","Nashik","Aurangabad"],
-  ts:["Hyderabad","Medchal","Rangareddy","Karimnagar","Warangal Urban","Nizamabad"],
-  ap:["Visakhapatnam","Krishna","Guntur","Nellore","Kurnool","East Godavari"],
-  ka:["Bengaluru Urban","Mysuru","Dharwad","Dakshina Kannada","Belagavi","Tumkur"],
+  uk:["Dehradun","Haridwar","Nainital","Udham Singh Nagar","Pauri Garhwal","Tehri Garhwal","Chamoli","Almora"],
+  up:["Lucknow","Agra","Varanasi","Kanpur Nagar","Prayagraj","Meerut","Ghaziabad","Gorakhpur"],
+  rj:["Jaipur","Jodhpur","Kota","Ajmer","Bikaner","Udaipur","Alwar","Bharatpur"],
+  br:["Patna","Gaya","Muzaffarpur","Bhagalpur","Darbhanga","Nalanda","Samastipur","Saran"],
+  jh:["Ranchi","Dhanbad","Bokaro","Deoghar","Hazaribagh","East Singhbhum","West Singhbhum","Giridih"],
+  wb:["Kolkata","Howrah","Bardhaman","Darjeeling","Murshidabad","Hooghly","North 24 Parganas","Nadia"],
+  as:["Kamrup Metro","Dibrugarh","Jorhat","Cachar","Sonitpur","Nagaon","Lakhimpur","Dhubri"],
+  ne:["East Imphal","Ri-Bhoi","Aizawl","Dimapur","East Khasi Hills","West Tripura","Churachandpur","Senapati"],
+  od:["Khordha","Cuttack","Sundargarh","Sambalpur","Ganjam","Puri","Balasore","Koraput"],
+  mp:["Bhopal","Indore","Jabalpur","Gwalior","Ujjain","Sagar","Rewa","Satna"],
+  cg:["Raipur","Bilaspur","Durg","Korba","Rajnandgaon","Bastar","Janjgir-Champa","Surguja"],
+  gj:["Ahmedabad","Surat","Vadodara","Rajkot","Bhavnagar","Jamnagar","Anand","Gandhinagar"],
+  mh:["Mumbai City","Pune","Nagpur","Thane","Nashik","Aurangabad","Solapur","Kolhapur"],
+  ts:["Hyderabad","Medchal","Rangareddy","Karimnagar","Warangal Urban","Nizamabad","Nalgonda","Khammam"],
+  ap:["Visakhapatnam","Krishna","Guntur","Nellore","Kurnool","East Godavari","West Godavari","Chittoor"],
+  ka:["Bengaluru Urban","Mysuru","Dharwad","Dakshina Kannada","Belagavi","Tumkur","Ballari","Mandya"],
   ga:["North Goa","South Goa"],
-  kl:["Ernakulam","Thiruvananthapuram","Kozhikode","Thrissur","Malappuram","Palakkad"],
-  tn:["Chennai","Coimbatore","Madurai","Tiruchirappalli","Vellore","Salem"],
+  kl:["Ernakulam","Thiruvananthapuram","Kozhikode","Thrissur","Malappuram","Palakkad","Kollam","Kannur"],
+  tn:["Chennai","Coimbatore","Madurai","Tiruchirappalli","Vellore","Salem","Tirunelveli","Erode"],
 };
 
-/* Deterministic offsets — positive = above state average, negative = below */
-const DIST_OFFSETS=[0.42,0.22,0.07,-0.10,-0.27,-0.38];
+const DISTRICT_COORDS={
+  jk:[[34.08,74.79],[32.73,74.87],[33.73,75.15],[34.21,74.36],[34.53,74.25],[34.17,77.58],[33.77,74.10],[32.37,75.52]],
+  hp:[[31.10,77.17],[32.10,76.27],[31.71,76.93],[31.96,77.11],[30.91,77.07],[31.34,76.76],[31.69,76.52],[31.47,76.27]],
+  pb:[[30.90,75.86],[31.63,74.87],[31.33,75.58],[30.34,76.39],[30.21,74.95],[31.53,75.91],[32.04,75.40],[30.24,75.85]],
+  hr:[[28.46,77.03],[28.41,77.31],[29.17,75.72],[30.38,76.78],[29.69,76.99],[28.89,76.59],[29.39,76.97],[28.99,77.02]],
+  dl:[[28.65,77.22],[28.53,77.20],[28.72,77.19],[28.63,77.28],[28.65,77.10],[28.73,77.07]],
+  uk:[[30.32,78.03],[29.95,78.16],[29.38,79.45],[29.02,79.41],[30.15,78.77],[30.39,78.48],[30.42,79.31],[29.60,79.64]],
+  up:[[26.85,80.95],[27.18,78.02],[25.32,83.01],[26.45,80.35],[25.43,81.85],[28.98,77.71],[28.67,77.44],[26.76,83.37]],
+  rj:[[26.92,75.79],[26.29,73.02],[25.18,75.86],[26.45,74.64],[28.02,73.31],[24.58,73.71],[27.56,76.64],[27.22,77.49]],
+  br:[[25.61,85.14],[24.79,85.00],[26.12,85.39],[25.24,86.98],[26.17,85.90],[25.22,85.51],[25.86,85.78],[25.96,84.89]],
+  jh:[[23.34,85.31],[23.79,86.43],[23.67,86.15],[24.47,86.69],[23.99,85.36],[22.80,86.20],[22.22,85.32],[24.19,86.30]],
+  wb:[[22.57,88.36],[22.59,88.26],[23.23,87.86],[27.04,88.26],[24.18,88.27],[22.91,88.39],[22.85,88.46],[23.47,88.55]],
+  as:[[26.14,91.74],[27.47,94.91],[26.75,94.20],[24.83,92.78],[26.63,92.80],[26.35,92.68],[27.23,94.10],[26.02,90.00]],
+  ne:[[24.82,93.95],[25.58,91.90],[23.73,92.72],[25.77,93.87],[25.57,91.88],[23.83,91.28],[24.33,93.67],[25.30,94.05]],
+  od:[[20.30,85.82],[20.46,85.88],[22.12,84.03],[21.47,83.97],[19.38,84.75],[19.81,85.83],[21.50,86.93],[18.80,82.68]],
+  mp:[[23.26,77.41],[22.72,75.86],[23.17,79.95],[26.22,78.18],[23.18,75.77],[23.84,78.74],[24.53,81.30],[24.60,80.83]],
+  cg:[[21.25,81.63],[22.08,82.15],[21.19,81.28],[22.35,82.68],[21.10,81.03],[19.10,82.02],[22.01,82.57],[23.10,83.07]],
+  gj:[[23.02,72.57],[21.17,72.83],[22.31,73.19],[22.30,70.80],[21.76,72.15],[22.47,70.07],[22.55,72.93],[23.22,72.63]],
+  mh:[[19.08,72.88],[18.52,73.86],[21.15,79.09],[19.22,72.98],[20.00,73.79],[19.88,75.34],[17.68,75.90],[16.70,74.24]],
+  ts:[[17.39,78.49],[17.64,78.47],[17.34,78.35],[18.44,79.13],[17.97,79.60],[18.67,78.09],[17.06,79.27],[17.25,80.15]],
+  ap:[[17.69,83.22],[16.51,80.65],[16.31,80.44],[14.45,79.99],[15.83,78.05],[17.00,81.80],[16.50,81.10],[13.22,79.10]],
+  ka:[[12.97,77.59],[12.30,76.65],[15.46,75.01],[12.87,74.88],[15.85,74.50],[13.34,77.10],[15.14,76.92],[12.52,76.90]],
+  ga:[[15.50,73.91],[15.27,74.00]],
+  kl:[[9.98,76.28],[8.52,76.94],[11.25,75.77],[10.52,76.21],[11.04,76.07],[10.78,76.65],[8.89,76.62],[11.87,75.36]],
+  tn:[[13.08,80.27],[11.00,76.96],[9.93,78.12],[10.79,78.69],[12.92,79.13],[11.65,78.16],[8.72,77.70],[11.34,77.73]],
+};
+
+/* Deterministic offsets — positive = above state avg, negative = below */
+const DIST_OFFSETS=[0.42,0.22,0.07,-0.10,-0.27,-0.38,0.15,-0.18];
+
+/* Per-state hex polygon radius (degrees) — sized relative to state geography */
+const DISTRICT_RADIUS={
+  dl:0.07,ga:0.13,pb:0.27,hr:0.27,uk:0.37,hp:0.38,jk:0.52,
+  kl:0.27,wb:0.27,br:0.31,jh:0.31,as:0.43,ne:0.40,tn:0.37,
+  mp:0.53,cg:0.46,rj:0.62,up:0.46,od:0.41,mh:0.48,gj:0.43,
+  ka:0.43,ap:0.43,ts:0.37,
+};
 
 function getDistrictData(layerId,stateId){
   const cfg=GIS_LAYERS[layerId];
@@ -85,7 +120,7 @@ function MapLegend({cfg}){
     <div>
       <div style={{display:"flex",height:8,borderRadius:4,overflow:"hidden",width:130,marginBottom:3}}>
         {Array.from({length:steps}).map((_,i)=>{
-          const t=i/(steps-1); const v=cfg.min+t*(cfg.max-cfg.min);
+          const t=i/(steps-1);const v=cfg.min+t*(cfg.max-cfg.min);
           return <div key={i} style={{flex:1,background:metricColor(v,cfg)}}/>;
         })}
       </div>
@@ -96,15 +131,50 @@ function MapLegend({cfg}){
   );
 }
 
+/* Generate hexagonal GeoJSON polygons for district-level choropleth */
+function generateDistrictGeoJSON(stateId){
+  const centers=DISTRICT_COORDS[stateId];
+  const names=DISTRICT_NAMES[stateId];
+  if(!centers||!names||!centers.length) return null;
+  const r=DISTRICT_RADIUS[stateId]||0.38;
+  const features=centers.slice(0,names.length).map((center,i)=>{
+    const [lat,lng]=center;
+    const ring=[];
+    for(let s=0;s<6;s++){
+      const a=(s*Math.PI/3)-Math.PI/6;
+      ring.push([lng+r*Math.cos(a),lat+r*0.65*Math.sin(a)]);
+    }
+    ring.push(ring[0]);
+    return {
+      type:"Feature",
+      properties:{name:names[i],idx:i,stateId},
+      geometry:{type:"Polygon",coordinates:[ring]},
+    };
+  });
+  return {type:"FeatureCollection",features};
+}
+
 function GISView(){
   const [layer,setLayer]=useState("health");
   const [selected,setSelected]=useState(null);
   const [drillMode,setDrillMode]=useState(false);
+  const [selectedDistrict,setSelectedDistrict]=useState(null);
   const [loaded,setLoaded]=useState(false);
   const [loadErr,setLoadErr]=useState(false);
+
   const mapRef=useRef(null);
   const geojsonRef=useRef(null);
+  const districtGeoJSONRef=useRef(null);
   const geoLoadedRef=useRef(false);
+  const stateFeatureMapRef=useRef({});
+  /* Refs mirror state so Leaflet event handlers always read current values */
+  const selectedRef=useRef(null);
+  const layerRef=useRef("health");
+  const selectedDistrictRef=useRef(null);
+
+  useEffect(()=>{selectedRef.current=selected;},[selected]);
+  useEffect(()=>{layerRef.current=layer;},[layer]);
+  useEffect(()=>{selectedDistrictRef.current=selectedDistrict;},[selectedDistrict]);
 
   const cfg=GIS_LAYERS[layer];
   const ranked=Object.entries(cfg.values).map(([id,v])=>({id,name:STATE_NAMES[id]||id,v})).sort((a,b)=>b.v-a.v);
@@ -112,13 +182,72 @@ function GISView(){
   const districtData=selected&&drillMode?getDistrictData(layer,selected):null;
   const distMax=districtData?Math.max(...districtData.map(d=>d.v))*1.08:1;
 
-  // Navigate to Ask NDAP and pre-fill the query
   function askNDAP(q){
     window.dispatchEvent(new CustomEvent('ndap-go',{detail:'ask'}));
     setTimeout(()=>window.dispatchEvent(new CustomEvent('ndap-prefill',{detail:q})),100);
   }
 
-  // Init map once
+  function clearDistrictLayer(){
+    if(districtGeoJSONRef.current){districtGeoJSONRef.current.remove();districtGeoJSONRef.current=null;}
+  }
+
+  function showDistrictPolygons(stateId,layerId){
+    clearDistrictLayer();
+    if(!mapRef.current) return;
+    const c=GIS_LAYERS[layerId];
+    const geoData=generateDistrictGeoJSON(stateId);
+    if(!geoData) return;
+    const districts=getDistrictData(layerId,stateId);
+    const valByName={};
+    districts.forEach(d=>{valByName[d.k]=d.v;});
+
+    const dl=L.geoJSON(geoData,{
+      style:feat=>{
+        const v=valByName[feat.properties.name];
+        return {fillColor:metricColor(v,c),fillOpacity:0.88,color:"#fff",weight:1.5};
+      },
+      onEachFeature:(feat,fl)=>{
+        const name=feat.properties.name;
+        const v=valByName[name];
+        fl.bindTooltip(
+          `<div style="font-family:system-ui;font-size:12px;padding:3px 8px;min-width:110px">
+            <div style="font-weight:700;margin-bottom:2px">${name}</div>
+            <div style="font-size:14px;font-weight:800;color:#192c6d">${v!=null?c.fmt(v):"—"}</div>
+            <div style="font-size:10px;color:#5a6b85;margin-top:1px">${c.unit}</div>
+          </div>`,
+          {direction:"top",offset:[0,-4]}
+        );
+        fl.on({
+          mouseover:e=>{e.target.setStyle({weight:3,color:"#1a2b8c",fillOpacity:0.96});e.target.bringToFront();},
+          mouseout:e=>{
+            const isSel=selectedDistrictRef.current&&selectedDistrictRef.current.name===name;
+            e.target.setStyle({weight:isSel?3:1.5,color:isSel?"#1a2b8c":"#fff",fillOpacity:isSel?0.96:0.88});
+          },
+          click:()=>{
+            const sel=selectedDistrictRef.current;
+            setSelectedDistrict(sel&&sel.name===name?null:{name,v:valByName[name],idx:feat.properties.idx});
+          },
+        });
+      },
+    }).addTo(mapRef.current);
+    districtGeoJSONRef.current=dl;
+  }
+
+  function zoomToState(stateId){
+    if(!mapRef.current) return;
+    const feat=stateFeatureMapRef.current[stateId];
+    if(feat){
+      const bounds=L.geoJSON(feat).getBounds();
+      mapRef.current.fitBounds(bounds,{padding:[44,44],maxZoom:9,animate:true,duration:0.7});
+    }
+  }
+
+  function resetToIndia(){
+    clearDistrictLayer();
+    if(mapRef.current) mapRef.current.flyTo([22.5,80],5,{duration:0.6});
+  }
+
+  /* Init map once */
   useEffect(()=>{
     if(!window.L||geoLoadedRef.current) return;
     geoLoadedRef.current=true;
@@ -130,6 +259,10 @@ function GISView(){
     fetch("https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson")
       .then(r=>r.json())
       .then(data=>{
+        data.features.forEach(f=>{
+          const sid=ST_MAP[f.properties.ST_NM];
+          if(sid) stateFeatureMapRef.current[sid]=f;
+        });
         const gl=L.geoJSON(data,{
           style:feat=>{
             const sid=ST_MAP[feat.properties.ST_NM];
@@ -139,10 +272,24 @@ function GISView(){
           onEachFeature:(feat,fl)=>{
             fl.on({
               mouseover:e=>{e.target.setStyle({weight:2.5,color:"#333",fillOpacity:0.95});e.target.bringToFront();},
-              mouseout:e=>{gl.resetStyle(e.target);},
-              click:()=>{const sid=ST_MAP[feat.properties.ST_NM];if(sid){setSelected(sid);setDrillMode(false);}}
+              mouseout:e=>{
+                const sid=ST_MAP[feat.properties.ST_NM];
+                const c=GIS_LAYERS[layerRef.current];
+                const v=sid?c.values[sid]:null;
+                const isSel=sid&&sid===selectedRef.current;
+                e.target.setStyle({
+                  fillColor:metricColor(v,c),
+                  fillOpacity:isSel?0.4:(v!=null?0.82:0.18),
+                  color:isSel?"#1a2b8c":"#fff",
+                  weight:isSel?3:1.2,
+                });
+              },
+              click:()=>{
+                const sid=ST_MAP[feat.properties.ST_NM];
+                if(sid){setSelected(sid);setDrillMode(false);setSelectedDistrict(null);clearDistrictLayer();}
+              },
             });
-          }
+          },
         }).addTo(m);
         geojsonRef.current=gl;
         setLoaded(true);
@@ -150,7 +297,7 @@ function GISView(){
       .catch(()=>setLoadErr(true));
   },[]);
 
-  // Update choropleth on layer change
+  /* Update state choropleth on layer change */
   useEffect(()=>{
     if(!geojsonRef.current) return;
     const c=GIS_LAYERS[layer];
@@ -158,12 +305,12 @@ function GISView(){
       const sid=ST_MAP[fl.feature?.properties?.ST_NM];
       const v=sid?c.values[sid]:null;
       fl.setStyle({fillColor:metricColor(v,c),fillOpacity:v!=null?0.82:0.18});
-      const name=fl.feature?.properties?.ST_NM||"";
-      fl.bindTooltip(`<div style="font-family:system-ui;font-size:12px;padding:3px 8px"><b>${name}</b><br/>${v!=null?c.fmt(v)+" "+c.unit:"No data"}</div>`,{direction:"top",offset:[0,-4]});
+      fl.bindTooltip(`<div style="font-family:system-ui;font-size:12px;padding:3px 8px"><b>${fl.feature?.properties?.ST_NM||""}</b><br/>${v!=null?c.fmt(v)+" "+c.unit:"No data"}</div>`,{direction:"top",offset:[0,-4]});
     });
+    if(drillMode&&selected) showDistrictPolygons(selected,layer);
   },[layer]);
 
-  // Highlight selected state
+  /* Dim/highlight states based on selection and drill mode */
   useEffect(()=>{
     if(!geojsonRef.current) return;
     const c=GIS_LAYERS[layer];
@@ -171,40 +318,95 @@ function GISView(){
       const sid=ST_MAP[fl.feature?.properties?.ST_NM];
       const v=sid?c.values[sid]:null;
       fl.setStyle({
-        fillColor:metricColor(v,c),fillOpacity:v!=null?0.82:0.18,
+        fillColor:metricColor(v,c),
+        fillOpacity:drillMode&&selected?(sid===selected?0.40:0.12):(v!=null?0.82:0.18),
         color:sid&&sid===selected?"#1a2b8c":"#fff",
         weight:sid&&sid===selected?3:1.2,
       });
     });
-  },[selected,layer]);
+  },[selected,layer,drillMode]);
+
+  /* Zoom + show district polygons on drill toggle */
+  useEffect(()=>{
+    if(drillMode&&selected){
+      zoomToState(selected);
+      showDistrictPolygons(selected,layer);
+    } else {
+      clearDistrictLayer();
+      setSelectedDistrict(null);
+      if(!drillMode&&mapRef.current) mapRef.current.flyTo([22.5,80],5,{duration:0.5});
+    }
+  },[drillMode,selected]);
+
+  /* Highlight selected district polygon */
+  useEffect(()=>{
+    if(!districtGeoJSONRef.current) return;
+    districtGeoJSONRef.current.eachLayer(fl=>{
+      const name=fl.feature?.properties?.name;
+      const isSel=selectedDistrict&&selectedDistrict.name===name;
+      fl.setStyle({color:isSel?"#1a2b8c":"#fff",weight:isSel?3:1.5,fillOpacity:isSel?0.96:0.88});
+      if(isSel) fl.bringToFront();
+    });
+  },[selectedDistrict]);
 
   const selVal=selected?cfg.values[selected]:null;
   const selRank=selected?ranked.findIndex(r=>r.id===selected)+1:null;
-
   const ghostBtn={display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,padding:"5px 11px",borderRadius:20,border:"1px solid var(--border)",background:"#fff",color:"var(--muted)",cursor:"pointer"};
 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
 
-      {/* Toolbar */}
+      {/* Toolbar with breadcrumb */}
       <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+
+        {/* Breadcrumb */}
+        <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12.5,fontWeight:600,flexShrink:0}}>
+          <span onClick={()=>{setSelected(null);setDrillMode(false);setSelectedDistrict(null);resetToIndia();}}
+            style={{color:selected?"var(--blue)":"var(--ink)",cursor:selected?"pointer":"default",padding:"2px 4px",borderRadius:4,transition:"background .1s"}}
+            onMouseEnter={e=>{if(selected)e.currentTarget.style.background="var(--blue-50)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
+            India
+          </span>
+          {selected&&<>
+            <span style={{color:"var(--muted-2)",userSelect:"none"}}>›</span>
+            <span onClick={()=>{if(drillMode){setDrillMode(false);setSelectedDistrict(null);}}}
+              style={{color:drillMode?"var(--blue)":"var(--ink)",cursor:drillMode?"pointer":"default",padding:"2px 4px",borderRadius:4,transition:"background .1s"}}
+              onMouseEnter={e=>{if(drillMode)e.currentTarget.style.background="var(--blue-50)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
+              {STATE_NAMES[selected]}
+            </span>
+          </>}
+          {drillMode&&selectedDistrict&&<>
+            <span style={{color:"var(--muted-2)",userSelect:"none"}}>›</span>
+            <span style={{color:"var(--ink)",padding:"2px 4px"}}>{selectedDistrict.name}</span>
+          </>}
+        </div>
+
+        <div style={{width:1,height:20,background:"var(--border)",flexShrink:0,marginLeft:2,marginRight:2}}/>
+
         <span style={{fontSize:11,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.7,flexShrink:0}}>Layer</span>
         <div style={{display:"flex",gap:4,flex:1,flexWrap:"wrap"}}>
           {Object.entries(GIS_LAYERS).map(([k,m])=>(
-            <button key={k} onClick={()=>{setLayer(k);setDrillMode(false);}} style={{display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,padding:"5px 11px",borderRadius:20,border:"1px solid",cursor:"pointer",transition:"all .15s",
-              borderColor:layer===k?"var(--blue)":"var(--border)",background:layer===k?"var(--blue)":"#fff",color:layer===k?"#fff":"var(--muted)"}}>
+            <button key={k} onClick={()=>{setLayer(k);if(drillMode&&selected)showDistrictPolygons(selected,k);}}
+              style={{display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,padding:"5px 11px",borderRadius:20,border:"1px solid",cursor:"pointer",transition:"all .15s",
+                borderColor:layer===k?"var(--blue)":"var(--border)",background:layer===k?"var(--blue)":"#fff",color:layer===k?"#fff":"var(--muted)"}}>
               <Icon name={m.icon} size={13}/>{m.label}
             </button>
           ))}
         </div>
         {loadErr&&<span style={{fontSize:12,color:"var(--red)",flexShrink:0}}>Map failed to load</span>}
         {!loaded&&!loadErr&&<span style={{fontSize:12,color:"var(--muted)",flexShrink:0}}>Loading map…</span>}
-        <button onClick={()=>{if(mapRef.current)mapRef.current.setView([22.5,80],5);setSelected(null);setDrillMode(false);}} style={{...ghostBtn,flexShrink:0}}><Icon name="globe" size={13}/>Reset</button>
+        <button onClick={()=>{setSelected(null);setDrillMode(false);setSelectedDistrict(null);resetToIndia();}} style={{...ghostBtn,flexShrink:0}}>
+          <Icon name="globe" size={13}/>Reset
+        </button>
         <button onClick={()=>{
-          const rows=ranked.map(r=>r.name+","+cfg.fmt(r.v)).join("\n");
-          const b=new Blob(["State,"+cfg.label+"\n"+rows],{type:"text/csv"});
+          const rows=(drillMode&&districtData?districtData.map(d=>d.k+","+cfg.fmt(d.v)):ranked.map(r=>r.name+","+cfg.fmt(r.v))).join("\n");
+          const header=drillMode&&districtData?"District,"+cfg.label:"State,"+cfg.label;
+          const b=new Blob([header+"\n"+rows],{type:"text/csv"});
           const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="ndap_gis.csv";a.click();
-        }} style={{...ghostBtn,flexShrink:0}}><Icon name="download" size={13}/>Export</button>
+        }} style={{...ghostBtn,flexShrink:0}}>
+          <Icon name="download" size={13}/>Export
+        </button>
       </div>
 
       {/* Map + Panel */}
@@ -223,25 +425,49 @@ function GISView(){
             </div>
           )}
 
-          {/* Selected state badge — top-left, with drill button */}
-          {selected&&selVal!=null&&(
-            <div style={{position:"absolute",top:10,left:14,zIndex:1001,background:"rgba(255,255,255,.97)",border:"2px solid var(--blue)",borderRadius:"var(--r)",padding:"10px 13px",boxShadow:"var(--sh-2)",minWidth:168}}>
+          {/* State badge — shown before drill */}
+          {selected&&selVal!=null&&!drillMode&&(
+            <div style={{position:"absolute",top:10,left:14,zIndex:1001,background:"rgba(255,255,255,.97)",border:"2px solid var(--blue)",borderRadius:"var(--r)",padding:"10px 13px",boxShadow:"var(--sh-2)",minWidth:172}}>
               <div style={{fontSize:10,fontWeight:700,color:"var(--blue)",textTransform:"uppercase",letterSpacing:.5,marginBottom:3}}>Selected State</div>
               <div style={{fontSize:13.5,fontWeight:700,color:"var(--ink)"}}>{STATE_NAMES[selected]}</div>
               <div style={{fontSize:20,fontWeight:700,color:"var(--navy-800)"}} className="tnum">{cfg.fmt(selVal)}</div>
               <div style={{fontSize:10.5,color:"var(--muted)",marginTop:1,marginBottom:8}}>{cfg.unit} · Rank #{selRank}</div>
-              <button onClick={()=>setDrillMode(d=>!d)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"5px 0",borderRadius:"var(--r-sm)",border:"1px solid",cursor:"pointer",fontSize:11.5,fontWeight:600,transition:"all .15s",
-                borderColor:drillMode?"var(--saffron)":"var(--blue)",background:drillMode?"var(--saffron-50)":"var(--blue-50)",color:drillMode?"var(--saffron)":"var(--blue)"}}>
-                <Icon name={drillMode?"chevL":"pin"} size={11}/>
-                {drillMode?"State overview":"District breakdown"}
+              <button onClick={()=>setDrillMode(true)}
+                style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"6px 0",borderRadius:"var(--r-sm)",border:"1px solid var(--blue)",background:"var(--blue-50)",color:"var(--blue)",cursor:"pointer",fontSize:11.5,fontWeight:600,transition:"all .15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.background="var(--blue)";e.currentTarget.style.color="#fff";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="var(--blue-50)";e.currentTarget.style.color="var(--blue)";}}>
+                <Icon name="pin" size={11}/>Drill into districts
               </button>
             </div>
           )}
 
-          {/* District drill note — when active */}
-          {drillMode&&selected&&(
-            <div style={{position:"absolute",bottom:14,right:14,zIndex:1001,background:"rgba(255,255,255,.93)",border:"1px solid var(--saffron-tint)",borderRadius:"var(--r)",padding:"7px 11px",pointerEvents:"none",fontSize:11,color:"var(--muted)",display:"flex",alignItems:"center",gap:5}}>
-              <Icon name="pin" size={12} style={{color:"var(--saffron)"}}/>District data shown in panel · state choropleth on map
+          {/* District detail badge — drill mode + district clicked */}
+          {drillMode&&selectedDistrict&&(
+            <div style={{position:"absolute",top:10,left:14,zIndex:1001,background:"rgba(255,255,255,.97)",border:"2px solid var(--saffron)",borderRadius:"var(--r)",padding:"10px 13px",boxShadow:"var(--sh-2)",minWidth:172}}>
+              <div style={{fontSize:10,fontWeight:700,color:"var(--saffron)",textTransform:"uppercase",letterSpacing:.5,marginBottom:3}}>District</div>
+              <div style={{fontSize:13.5,fontWeight:700,color:"var(--ink)"}}>{selectedDistrict.name}</div>
+              <div style={{fontSize:10.5,color:"var(--muted)",marginBottom:4}}>{STATE_NAMES[selected]}</div>
+              <div style={{fontSize:20,fontWeight:700,color:"var(--navy-800)"}} className="tnum">{cfg.fmt(selectedDistrict.v)}</div>
+              <div style={{fontSize:10.5,color:"var(--muted)",marginTop:1,marginBottom:8}}>{cfg.unit}</div>
+              <button onClick={()=>setSelectedDistrict(null)}
+                style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"5px 0",borderRadius:"var(--r-sm)",border:"1px solid var(--saffron-tint)",background:"var(--saffron-50)",color:"var(--saffron)",cursor:"pointer",fontSize:11.5,fontWeight:600}}>
+                <Icon name="close" size={11}/>Deselect district
+              </button>
+            </div>
+          )}
+
+          {/* Drill mode indicator — in drill but no district selected */}
+          {drillMode&&selected&&!selectedDistrict&&(
+            <div style={{position:"absolute",top:10,left:14,zIndex:1001,background:"rgba(255,255,255,.95)",border:"1px solid var(--saffron-tint)",borderRadius:"var(--r)",padding:"8px 12px",boxShadow:"var(--sh-2)",display:"flex",alignItems:"center",gap:8,maxWidth:270}}>
+              <Dot color="var(--saffron)" pulse/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:11.5,fontWeight:700,color:"var(--ink)"}}>District view — {STATE_NAMES[selected]}</div>
+                <div style={{fontSize:10,color:"var(--muted)",marginTop:1}}>Click a district polygon for details</div>
+              </div>
+              <button onClick={()=>setDrillMode(false)} title="Back to state view"
+                style={{width:28,height:28,borderRadius:6,border:"1px solid var(--border)",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",flexShrink:0}}>
+                <Icon name="close" size={13}/>
+              </button>
             </div>
           )}
         </div>
@@ -249,7 +475,7 @@ function GISView(){
         {/* Right stats panel */}
         <div style={{width:296,borderLeft:"1px solid var(--border)",display:"flex",flexDirection:"column",background:"var(--surface)",flexShrink:0}}>
 
-          {/* KPIs */}
+          {/* KPI tiles */}
           <div style={{padding:"14px 16px",borderBottom:"1px solid var(--border)",background:"var(--surface-2)",flexShrink:0}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.6,color:"var(--saffron)",marginBottom:8}}>
               {drillMode&&selected?`${STATE_NAMES[selected]} — Districts`:cfg.label+" · Overview"}
@@ -288,7 +514,7 @@ function GISView(){
             <div style={{fontSize:11.5,color:"var(--muted)",lineHeight:1.4}}>{cfg.description}</div>
           </div>
 
-          {/* Ranking list or district drill */}
+          {/* Ranked list (states or districts) */}
           <div style={{flex:1,overflowY:"auto"}}>
             {!drillMode&&(<>
               <div style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.7,padding:"10px 16px 5px"}}>All States — Ranked</div>
@@ -296,7 +522,7 @@ function GISView(){
                 const pct=Math.max((s.v-cfg.min)/(cfg.max-cfg.min)*100,2);
                 const isSel=s.id===selected;
                 return (
-                  <div key={s.id} onClick={()=>{setSelected(s.id);setDrillMode(false);}}
+                  <div key={s.id} onClick={()=>{setSelected(s.id);setDrillMode(false);setSelectedDistrict(null);clearDistrictLayer();}}
                     style={{display:"flex",alignItems:"center",gap:10,padding:"8px 16px",borderBottom:"1px solid var(--surface-3)",cursor:"pointer",background:isSel?"var(--blue-50)":"transparent",transition:"background .1s"}}
                     onMouseEnter={e=>{if(!isSel)e.currentTarget.style.background="var(--surface-2)";}}
                     onMouseLeave={e=>{if(!isSel)e.currentTarget.style.background="transparent";}}>
@@ -314,27 +540,31 @@ function GISView(){
             </>)}
 
             {drillMode&&selected&&districtData&&districtData.length>0&&(<>
-              <div style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.7,padding:"10px 16px 5px",display:"flex",alignItems:"center",gap:6}}>
-                Districts in {STATE_NAMES[selected]}
+              <div style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.7,padding:"10px 16px 5px"}}>
+                Districts — {STATE_NAMES[selected]}
               </div>
               {districtData.map((d,i)=>{
                 const pct=Math.max((d.v/distMax)*100,3);
+                const isSel=selectedDistrict&&selectedDistrict.name===d.k;
                 return (
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 16px",borderBottom:"1px solid var(--surface-3)"}}>
+                  <div key={i} onClick={()=>setSelectedDistrict(prev=>prev?.name===d.k?null:{name:d.k,v:d.v,idx:i})}
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"8px 16px",borderBottom:"1px solid var(--surface-3)",cursor:"pointer",background:isSel?"var(--saffron-50)":"transparent",transition:"background .1s"}}
+                    onMouseEnter={e=>{if(!isSel)e.currentTarget.style.background="var(--surface-2)";}}
+                    onMouseLeave={e=>{if(!isSel)e.currentTarget.style.background="transparent";}}>
                     <span className="tnum" style={{fontSize:11,fontWeight:700,color:"var(--muted-2)",width:18,flexShrink:0}}>{i+1}</span>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12.5,fontWeight:500,color:"var(--ink)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.k}</div>
+                      <div style={{fontSize:12.5,fontWeight:isSel?700:500,color:isSel?"var(--saffron)":"var(--ink)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.k}</div>
                       <div style={{height:3,background:"var(--surface-3)",borderRadius:3,marginTop:4,overflow:"hidden"}}>
                         <div style={{height:"100%",width:pct+"%",background:metricColor(d.v,cfg),borderRadius:3}}/>
                       </div>
                     </div>
-                    <span className="tnum" style={{fontSize:12,fontWeight:700,color:"var(--ink-2)",flexShrink:0}}>{cfg.fmt(d.v)}</span>
+                    <span className="tnum" style={{fontSize:12,fontWeight:700,color:isSel?"var(--saffron)":"var(--ink-2)",flexShrink:0}}>{cfg.fmt(d.v)}</span>
                   </div>
                 );
               })}
               <div style={{padding:"10px 16px 14px",fontSize:10.5,color:"var(--muted-2)",lineHeight:1.5,borderTop:"1px solid var(--surface-3)"}}>
-                <Icon name="warn" size={11} style={{display:"inline",verticalAlign:"middle",marginRight:4,color:"var(--amber)"}}/> 
-                Illustrative district estimates — indicative only. Full district-level data available via NDAP datasets.
+                <Icon name="warn" size={11} style={{display:"inline",verticalAlign:"middle",marginRight:4,color:"var(--amber)"}}/>
+                Illustrative estimates — indicative only. Full district-level data available via NDAP datasets.
               </div>
             </>)}
 
@@ -350,13 +580,15 @@ function GISView(){
           {/* Ask NDAP panel */}
           <div style={{padding:"10px 14px",borderTop:"1px solid var(--border)",background:"var(--surface-2)",flexShrink:0}}>
             <div style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"flex",alignItems:"center",gap:5}}>
-              <Icon name="ask" size={11} style={{color:"var(--blue)"}}/>Ask NDAP
+              <Icon name="ask" size={11} style={{color:"var(--blue)"}}/>Ask NDAP about this data
             </div>
             {[
-              "Compare all states on " + cfg.label,
-              selected
-                ? "What factors drive " + cfg.label + " variation across districts in " + STATE_NAMES[selected] + "?"
-                : "Why does " + cfg.label + " vary across Indian states?",
+              "Compare all states on "+cfg.label,
+              drillMode&&selectedDistrict
+                ?"How does "+selectedDistrict.name+" compare to other districts in "+STATE_NAMES[selected]+" on "+cfg.label+"?"
+                :selected
+                  ?"What factors drive "+cfg.label+" variation across districts in "+STATE_NAMES[selected]+"?"
+                  :"Why does "+cfg.label+" vary across Indian states?",
             ].map((q,i)=>(
               <button key={i} onClick={()=>askNDAP(q)}
                 style={{width:"100%",textAlign:"left",marginBottom:5,fontSize:12,color:"var(--blue-700)",background:"var(--blue-50)",border:"1px solid var(--blue-100)",borderRadius:"var(--r)",padding:"7px 10px",cursor:"pointer",fontWeight:500,display:"flex",alignItems:"center",gap:5,transition:"background .15s"}}
